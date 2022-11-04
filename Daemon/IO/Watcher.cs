@@ -15,7 +15,7 @@ public sealed class Watcher : IDisposable
     private readonly ManualResetEventSlim _initializedEvent = new();
     private readonly ILogger<Watcher> _logger;
     private readonly object _syncRoot = new();
-    private Action<FileSystemEventArgs>? _callback;
+    private Func<FileSystemEventArgs, ValueTask>? _callback;
     private FileSystemEventCollection _collection;
     private readonly Thread _internalThread;
 
@@ -36,7 +36,7 @@ public sealed class Watcher : IDisposable
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
-    public Watcher(Action<FileSystemEventArgs>? callback, FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null)
+    public Watcher(Func<FileSystemEventArgs, ValueTask>? callback, FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
@@ -57,7 +57,7 @@ public sealed class Watcher : IDisposable
     /// Add callback to current callback chain
     /// </summary>
     /// <param name="callback"> Callback to add to chain </param>
-    public void AddCallback(Action<FileSystemEventArgs> callback)
+    public void AddCallback(Func<FileSystemEventArgs, ValueTask> callback)
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
@@ -72,7 +72,7 @@ public sealed class Watcher : IDisposable
     /// Remove callback from current callback chain
     /// </summary>
     /// <param name="callback"> Callback to remove from chain </param>
-    public void RemoveCallback(Action<FileSystemEventArgs> callback)
+    public void RemoveCallback(Func<FileSystemEventArgs, ValueTask> callback)
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
@@ -90,7 +90,7 @@ public sealed class Watcher : IDisposable
     /// <exception cref="InvalidOperationException">
     /// Thrown if no callbacks available to execute
     /// </exception>
-    public void Watch(Action<FileSystemEventArgs>? callback = null)
+    public void Watch(Func<FileSystemEventArgs, ValueTask>? callback = null)
     {
         if (_callback is null && callback is null)
             throw new InvalidOperationException("Unable to watch with no callback to execute");

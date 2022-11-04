@@ -1,17 +1,22 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
+using Daemon.Configurations;
+using Daemon.IO;
 
 namespace Daemon.Middlewares;
 
 public class WebSocketMiddleware : IMiddleware
 {
+    private static object _syncRoot = new();
     private static int _socketCounter = 0;
 
     // The key is a socket id
     private static readonly ConcurrentDictionary<int, ConnectedClient> _clients = new ConcurrentDictionary<int, ConnectedClient>();
+    private static readonly ConcurrentDictionary<string, Watcher> _watchers = new ConcurrentDictionary<string, Watcher>();
 
     private static readonly CancellationTokenSource SocketLoopTokenSource = new CancellationTokenSource();
+    private static readonly CancellationTokenSource WatchersTokenSource = new CancellationTokenSource();
 
     private static CancellationTokenRegistration _appShutdownHandler;
 
@@ -151,7 +156,29 @@ public class WebSocketMiddleware : IMiddleware
                         var command = JsonSerializer.Deserialize<SubscribeChangesCommand>(new ReadOnlySpan<byte>(buffer.Array!, 0, receiveResult.Count));
                         if (command is not null)
                         {
-                            client.BroadcastQueue.Writer.TryWrite(new FileSystemEventArgs(WatcherChangeTypes.All, command.Path, null));
+                            var path = command.Path;
+
+                            // safety creating watcher against parallel calls
+                            if (_watchers.TryGetValue(path, out var watcher))
+                            {
+                                watcher.AddCallback(client.BroadcastAsync);
+                            }
+                            else
+                            {
+                                lock (_syncRoot)
+                                {
+                                    if (!_watchers.TryGetValue(path, out watcher))
+                                    {
+                                        watcher = new Watcher(new FileSystemEventConfiguration(path), WatchersTokenSource.Token);
+                                        watcher.AddCallback(client.BroadcastAsync);
+                                        watcher.Watch();
+                                    }
+                                    else
+                                    {
+                                        watcher.AddCallback(client.BroadcastAsync);
+                                    }
+                                }
+                            }
                         }
                     }
 

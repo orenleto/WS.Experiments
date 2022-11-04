@@ -51,4 +51,9 @@ public class ConnectedClient
             }
         }
     }
+
+    public ValueTask BroadcastAsync(FileSystemEventArgs obj)
+    {
+        return BroadcastQueue.Writer.WriteAsync(obj, BroadcastLoopTokenSource.Token);
+    }
 }
