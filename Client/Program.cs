@@ -7,7 +7,7 @@ public class Program
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         
-        var client = new Client("ws://localhost:5000/ws");
+        var client = new Client("ws://localhost:5000/");
         var daemon = Proxy<IFileSystemDaemon>(client);
         
         // absolute path is passed
@@ -28,7 +28,7 @@ public class Program
 
     private static void DumpEvent(FileSystemEvent fileSystemEvent)
     {
-        
+        Console.WriteLine(fileSystemEvent);
     }
 
     private static IFileSystemDaemon Proxy<T>(Client client) => new MyProxyClass(client); 

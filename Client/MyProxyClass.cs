@@ -9,13 +9,14 @@ public class MyProxyClass : IFileSystemDaemon
 {
     private readonly CancellationTokenSource _networkConnectionTokenSource;
     private readonly Client _client;
+    private readonly Channel<FileSystemEvent> _channel;
     
     private ClientWebSocket? _webSocket;
-    private Channel<FileSystemEvent>? _channel;
 
     public MyProxyClass(Client client)
     {
         _client = client;
+        _channel = Channel.CreateUnbounded<FileSystemEvent>();
         _networkConnectionTokenSource = new CancellationTokenSource();
     }
 
@@ -31,9 +32,10 @@ public class MyProxyClass : IFileSystemDaemon
         if (!token.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
             await _webSocket.SendAsync(bytes, WebSocketMessageType.Binary, WebSocketMessageFlags.EndOfMessage, token);
         
-        return new CustomChannelReader<FileSystemEvent>(this, _channel!.Reader);
+        // todo: предусмотреть возможность подписки на разные директории;
+        // как должны приходить события в один канал (логично по типу события) или для каждой директории свой канал (логично по возвращаемому типу)
+        return new CustomChannelReader<FileSystemEvent>(this, _channel.Reader);
     }
-
     public async Task Cancel()
     {
         if (_webSocket?.State != WebSocketState.Open || _networkConnectionTokenSource.IsCancellationRequested)
@@ -55,7 +57,6 @@ public class MyProxyClass : IFileSystemDaemon
             _webSocket = new ClientWebSocket();
             await _webSocket.ConnectAsync(_client.Uri, token);
             
-            _channel = Channel.CreateUnbounded<FileSystemEvent>();
             _ = Task.Run(() => SocketProcessingLoopAsync().ConfigureAwait(false));
             
             return true;
@@ -64,11 +65,9 @@ public class MyProxyClass : IFileSystemDaemon
         return false;
     }
 
-    private record SubscribeChangesCommand([UsedImplicitly] string Path);
-
     private async Task SocketProcessingLoopAsync()
     {
-        if (_webSocket is null || _channel is null)
+        if (_webSocket is null)
             // todo: использовать ResourceManager для текста ошибки
             throw new InvalidOperationException();
         
@@ -84,9 +83,9 @@ public class MyProxyClass : IFileSystemDaemon
                 {
                     if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close)
                     {
-                        var fileSystemEvent = JsonSerializer.Deserialize<FileSystemEvent>(buffer);
-                        if (fileSystemEvent != null)
-                            await writer.WriteAsync(fileSystemEvent, cancellationToken);
+                        var @event = JsonSerializer.Deserialize<FileSystemEvent>(new ReadOnlySpan<byte>(buffer.Array!, 0, receiveResult.Count));
+                        if (@event is not null)
+                            await writer.WriteAsync(@event, cancellationToken);
                         continue;
                     }
                     if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)
@@ -106,4 +105,6 @@ public class MyProxyClass : IFileSystemDaemon
             _webSocket.Dispose();
         }
     }
+
+    private record SubscribeChangesCommand([UsedImplicitly] string Path);
 }
