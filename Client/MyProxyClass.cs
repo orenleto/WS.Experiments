@@ -36,13 +36,14 @@ public class MyProxyClass : IFileSystemDaemon
         // как должны приходить события в один канал (логично по типу события) или для каждой директории свой канал (логично по возвращаемому типу)
         return new CustomChannelReader<FileSystemEvent>(this, _channel.Reader);
     }
+    
     public async Task Cancel()
     {
         if (_webSocket?.State != WebSocketState.Open || _networkConnectionTokenSource.IsCancellationRequested)
             return;
 
-        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         _networkConnectionTokenSource.Cancel();
+        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
     }
 
     private async ValueTask<bool> CheckConnection()
@@ -90,6 +91,7 @@ public class MyProxyClass : IFileSystemDaemon
                     }
                     if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)
                     {
+                        Console.WriteLine("Закрываем коннекцию – получили сообщение снаружи");
                         await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledge Close frame", CancellationToken.None);
                     }
                 }
@@ -101,8 +103,10 @@ public class MyProxyClass : IFileSystemDaemon
         }
         finally
         {
+            Console.WriteLine("Закрываем коннекцию – отменили токен или произошло исключение");
             _networkConnectionTokenSource.Cancel();
             _webSocket.Dispose();
+            _channel.Writer.Complete();
         }
     }
 

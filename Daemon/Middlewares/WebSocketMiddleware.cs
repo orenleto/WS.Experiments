@@ -16,7 +16,6 @@ public class WebSocketMiddleware : IMiddleware
     private static readonly ConcurrentDictionary<string, Watcher> _watchers = new ConcurrentDictionary<string, Watcher>();
 
     private static readonly CancellationTokenSource SocketLoopTokenSource = new CancellationTokenSource();
-    private static readonly CancellationTokenSource WatchersTokenSource = new CancellationTokenSource();
 
     private static CancellationTokenRegistration _appShutdownHandler;
 
@@ -153,7 +152,8 @@ public class WebSocketMiddleware : IMiddleware
                         Console.WriteLine($"Socket {client.SocketId}: Received {receiveResult.MessageType} frame ({receiveResult.Count} bytes).");
                         Console.WriteLine($"Socket {client.SocketId}: Echoing data to queue.");
 
-                        var command = JsonSerializer.Deserialize<SubscribeChangesCommand>(new ReadOnlySpan<byte>(buffer.Array!, 0, receiveResult.Count));
+                        var command = JsonSerializer.Deserialize<SubscribeChangesCommand>(new ReadOnlySpan<byte>(buffer.Array!, 0,
+                            receiveResult.Count));
                         if (command is not null)
                         {
                             var path = command.Path;
@@ -161,7 +161,7 @@ public class WebSocketMiddleware : IMiddleware
                             // safety creating watcher against parallel calls
                             if (_watchers.TryGetValue(path, out var watcher))
                             {
-                                watcher.AddCallback(client.BroadcastAsync);
+                                client.Subscribe(watcher);
                             }
                             else
                             {
@@ -169,13 +169,13 @@ public class WebSocketMiddleware : IMiddleware
                                 {
                                     if (!_watchers.TryGetValue(path, out watcher))
                                     {
-                                        watcher = new Watcher(new FileSystemEventConfiguration(path), WatchersTokenSource.Token);
-                                        watcher.AddCallback(client.BroadcastAsync);
+                                        watcher = new Watcher(new FileSystemEventConfiguration(path), broadcastTokenSource.Token);
+                                        client.Subscribe(watcher);
                                         watcher.Watch();
                                     }
                                     else
                                     {
-                                        watcher.AddCallback(client.BroadcastAsync);
+                                        client.Subscribe(watcher);
                                     }
                                 }
                             }
@@ -196,6 +196,10 @@ public class WebSocketMiddleware : IMiddleware
         catch (OperationCanceledException)
         {
             // normal upon task/token cancellation, disregard
+        }
+        catch (WebSocketException)
+        {
+            // problems with connection
         }
         catch (Exception ex)
         {

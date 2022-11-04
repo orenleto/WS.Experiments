@@ -1,49 +1,69 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
+using Daemon.IO;
 using Daemon.Middlewares;
 
 namespace Daemon;
 
 public class ConnectedClient
 {
+    private readonly LinkedList<Watcher> _watchers;
+    private readonly Channel<EventArgs> _broadcastQueue;
+    
+    public int SocketId { get; }
+    public WebSocket Socket { get; }
+    public TaskCompletionSource<object> TaskCompletion { get; }
+    public CancellationTokenSource BroadcastLoopTokenSource { get; }
+    
     public ConnectedClient(int socketId, WebSocket socket, TaskCompletionSource<object> taskCompletion)
     {
+        _watchers = new LinkedList<Watcher>();
+        _broadcastQueue = Channel.CreateUnbounded<EventArgs>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
+
         SocketId = socketId;
         Socket = socket;
         TaskCompletion = taskCompletion;
-        BroadcastQueue = Channel.CreateUnbounded<FileSystemEventArgs>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
+        BroadcastLoopTokenSource = new CancellationTokenSource();
     }
-
-    public int SocketId { get; private set; }
-
-    public WebSocket Socket { get; private set; }
-
-    public TaskCompletionSource<object> TaskCompletion { get; private set; }
-
-    public Channel<FileSystemEventArgs> BroadcastQueue { get; private set; }
-
-    public CancellationTokenSource BroadcastLoopTokenSource { get; set; } = new CancellationTokenSource();
 
     public async Task BroadcastLoopAsync()
     {
         var cancellationToken = BroadcastLoopTokenSource.Token;
+        EventArgs? eventArgs = null;
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                while (await BroadcastQueue.Reader.WaitToReadAsync(cancellationToken))
+                while (await _broadcastQueue.Reader.WaitToReadAsync(cancellationToken) || eventArgs is not null)
                 {
-                    var fileSystemEventArgs = await BroadcastQueue.Reader.ReadAsync(cancellationToken);
+                    eventArgs = eventArgs ?? await _broadcastQueue.Reader.ReadAsync(cancellationToken);
                     Console.WriteLine($"Socket {SocketId}: Sending from queue.");
-                    var @event = new FileSystemEvent(fileSystemEventArgs.ChangeType, fileSystemEventArgs.FullPath, fileSystemEventArgs.Name, null);
-                    var msgbuf = new ArraySegment<byte>(JsonSerializer.SerializeToUtf8Bytes(@event));
-                    await Socket.SendAsync(msgbuf, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+                    var @event = eventArgs switch
+                    {
+                        RenamedEventArgs renamedEventArgs => new FileSystemEvent(renamedEventArgs.ChangeType, renamedEventArgs.FullPath, renamedEventArgs.Name, renamedEventArgs.OldName),
+                        FileSystemEventArgs fileSystemEventArgs => new FileSystemEvent(fileSystemEventArgs.ChangeType, fileSystemEventArgs.FullPath, fileSystemEventArgs.Name, null),
+                        _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
+                    };
+
+                    await Socket.SendAsync(
+                        new ReadOnlyMemory<byte>(JsonSerializer.SerializeToUtf8Bytes(@event)),
+                        WebSocketMessageType.Binary,
+                        endOfMessage: true,
+                        cancellationToken: cancellationToken
+                    );
+                    eventArgs = null;
                 }
             }
             catch (OperationCanceledException)
             {
-                // normal upon task/token cancellation, disregard
+                Console.WriteLine("Произошла отмена слушания сокета, клиент должен отписаться от всех watchers");
+                foreach (var watcher in _watchers)
+                    watcher.RemoveCallback(BroadcastAsync);
+            }
+            catch (WebSocketException)
+            {
             }
             catch (Exception ex)
             {
@@ -52,8 +72,14 @@ public class ConnectedClient
         }
     }
 
-    public ValueTask BroadcastAsync(FileSystemEventArgs obj)
+    public void Subscribe(Watcher watcher)
     {
-        return BroadcastQueue.Writer.WriteAsync(obj, BroadcastLoopTokenSource.Token);
+        watcher.AddCallback(BroadcastAsync);
+        _watchers.AddLast(watcher);
+    }
+
+    private ValueTask BroadcastAsync(FileSystemEventArgs fileSystemEventArgs)
+    {
+        return _broadcastQueue.Writer.WriteAsync(fileSystemEventArgs, BroadcastLoopTokenSource.Token);
     }
 }

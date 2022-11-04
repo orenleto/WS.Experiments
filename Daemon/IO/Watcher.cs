@@ -90,19 +90,10 @@ public sealed class Watcher : IDisposable
     /// <exception cref="InvalidOperationException">
     /// Thrown if no callbacks available to execute
     /// </exception>
-    public void Watch(Func<FileSystemEventArgs, ValueTask>? callback = null)
+    public void Watch()
     {
-        if (_callback is null && callback is null)
+        if (_callback is null)
             throw new InvalidOperationException("Unable to watch with no callback to execute");
-
-        if (callback is not null)
-        {
-            _logger.CallbackOverride();
-            lock (_syncRoot)
-            {
-                _callback = callback;
-            }
-        }
 
         _internalThread.Start();
         _initializedEvent.Wait(_cancellationToken);
@@ -118,20 +109,24 @@ public sealed class Watcher : IDisposable
         _collection?.Dispose();
     }
 
-    private void StartCollectionWatcher()
+    private async void StartCollectionWatcher()
     {
+        Console.WriteLine("Watcher by DIR [{0}] started", _configuration.DirectoryToMonitor);
         _collection = new FileSystemEventCollection(_configuration, _cancellationToken);
 
         Task.Run(() =>
         {
             _collection.IsInitializedEvent.Wait(_cancellationToken);
             _initializedEvent.Set();
-        }, _cancellationToken);
+        });
 
         using var collectionEnumerator = _collection.GetEnumerator();
-        while (collectionEnumerator.MoveNext())
+        while (collectionEnumerator.MoveNext() && _callback is not null)
         {
-            _callback!(collectionEnumerator.Current);
+            Console.WriteLine("Watcher by DIR [{0}] produce event", _configuration.DirectoryToMonitor);
+            await _callback!(collectionEnumerator.Current);
         }
+
+        Console.WriteLine("Watcher by DIR [{0}] stopped", _configuration.DirectoryToMonitor);
     }
 }
