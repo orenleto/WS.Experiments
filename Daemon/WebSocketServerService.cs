@@ -1,16 +1,19 @@
-using System.Net;
+using Daemon.Configurations;
+using Microsoft.Extensions.Options;
 
 namespace Daemon;
 
 public class WebSocketServerService : IHostedService, IDisposable
 {
-    private readonly ILogger<WebSocketServerService> _logger;
     private readonly MyServer _server;
 
-    public WebSocketServerService(ILogger<WebSocketServerService> logger)
+    public WebSocketServerService(
+        ISubscriptionManager subscriptionManager,
+        IOptions<ServerConfiguration> configuration,
+        ILoggerFactory loggerFactory
+    )
     {
-        _logger = logger;
-        _server = new MyServer(IPAddress.Loopback, 5000);
+        _server = new MyServer(configuration.Value, subscriptionManager, loggerFactory);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

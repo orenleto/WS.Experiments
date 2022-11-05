@@ -7,32 +7,34 @@ namespace Daemon;
 
 public class ClientSession : WsSession
 {
-    private readonly SubscriptionManager _subscriptionManager;
+    private readonly ISubscriptionManager _subscriptionManager;
+    private readonly ILogger<ClientSession> _logger;
 
-    public ClientSession(WsServer server, SubscriptionManager subscriptionManager) : base(server)
+    public ClientSession(WsServer server, ISubscriptionManager subscriptionManager, ILogger<ClientSession> logger) : base(server)
     {
         _subscriptionManager = subscriptionManager;
+        _logger = logger;
     }
     
     public override void OnWsConnected(HttpRequest request)
     {
-        Console.WriteLine($"Chat WebSocket session with Id {Id} connected!");
+        _logger.LogInformation("Chat WebSocket session with Id {id} connected!", Id);
     }
 
     public override void OnWsDisconnected()
     {
         _subscriptionManager.UnsubscribeAll(this);
-        Console.WriteLine($"Chat WebSocket session with Id {Id} disconnected!");
+        _logger.LogInformation("Chat WebSocket session with Id {id} disconnected!", Id);
     }
 
     public override void OnWsReceived(byte[] buffer, long offset, long size)
     {
         var message = Encoding.UTF8.GetString(buffer, (int)offset, (int)size);
-        Console.WriteLine($"Incoming from Id {Id}: {message}");
+        _logger.LogInformation("Incoming from Id {id}: {message}", Id, message);
 
         var jsonTree = JsonDocument.Parse(message);
         var methodName = jsonTree.RootElement.GetProperty("MethodName").GetString();
-        Console.WriteLine("Method name: " + methodName);
+        _logger.LogInformation("Method name: " + methodName);
 
         if (methodName == "SubscribeChanges-String")
         {
@@ -55,7 +57,7 @@ public class ClientSession : WsSession
 
     protected override void OnError(SocketError error)
     {
-        Console.WriteLine($"Chat WebSocket session caught an error with code {error}");
+        _logger.LogError("Chat WebSocket session caught an error with code {error}", error);
     }
 }
 

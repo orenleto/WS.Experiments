@@ -12,7 +12,7 @@ public sealed class Watcher : IDisposable
 {
     private readonly object _syncRoot = new();
     private readonly ManualResetEventSlim _initializedEvent = new();
-    private readonly CancellationToken _cancellationToken;
+    private readonly CancellationTokenSource _cancellationTokenSource;
     
     private readonly FileSystemEventConfiguration _configuration;
     private readonly ILogger<Watcher> _logger;
@@ -22,6 +22,8 @@ public sealed class Watcher : IDisposable
     private readonly Action<string>? _onTerminate;
     
     private FileSystemEventCollection _collection;
+
+    public string Directory => _configuration.DirectoryToMonitor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Watcher"/> class.
@@ -37,7 +39,7 @@ public sealed class Watcher : IDisposable
 
         _callback = callback;
         _onTerminate = onTerminate;
-        _cancellationToken = cancellationToken;
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _configuration = configuration;
         _logger = logger ?? NullLogger<Watcher>.Instance;
 
@@ -60,6 +62,7 @@ public sealed class Watcher : IDisposable
         lock (_syncRoot)
         {
             _callback += callback;
+            _logger.LogInformation("Watcher {directory} has one more subscriber", _configuration.DirectoryToMonitor);
         }
     }
 
@@ -75,6 +78,12 @@ public sealed class Watcher : IDisposable
         lock (_syncRoot)
         {
             _callback -= callback;
+            if (_callback is null)
+            {
+                _logger.LogInformation("Watcher {directory} stopping initialized", _configuration.DirectoryToMonitor);
+                _cancellationTokenSource.Cancel();
+            }
+
         }
     }
 
@@ -91,7 +100,7 @@ public sealed class Watcher : IDisposable
             throw new InvalidOperationException("Unable to watch without callback to execute");
 
         _internalThread.Start();
-        _initializedEvent.Wait(_cancellationToken);
+        _initializedEvent.Wait(_cancellationTokenSource.Token);
     }
 
     /// <summary>
@@ -100,29 +109,31 @@ public sealed class Watcher : IDisposable
     /// </summary>
     public void Dispose()
     {
+        _cancellationTokenSource.Dispose();
         _initializedEvent.Dispose();
         _collection.Dispose();
     }
 
     private async void StartCollectionWatcher()
     {
-        Console.WriteLine("Watcher by DIR [{0}] started", _configuration.DirectoryToMonitor);
-        _collection = new FileSystemEventCollection(_configuration, _cancellationToken);
+        var cancellationToken = _cancellationTokenSource.Token;
+        _logger.LogInformation("Watcher {directory}  started", _configuration.DirectoryToMonitor);
+        _collection = new FileSystemEventCollection(_configuration, cancellationToken);
 
         Task.Run(() =>
         {
-            _collection.IsInitializedEvent.Wait(_cancellationToken);
+            _collection.IsInitializedEvent.Wait(cancellationToken);
             _initializedEvent.Set();
         });
 
         using var collectionEnumerator = _collection.GetEnumerator();
         while (collectionEnumerator.MoveNext() && _callback is not null)
         {
-            Console.WriteLine("Watcher by DIR [{0}] produce event", _configuration.DirectoryToMonitor);
+            _logger.LogInformation("Watcher {directory}  produce event {event}", _configuration.DirectoryToMonitor, collectionEnumerator.Current.Name);
             await _callback!(collectionEnumerator.Current);
         }
 
         _onTerminate?.Invoke(_configuration.DirectoryToMonitor);
-        Console.WriteLine("Watcher by DIR [{0}] stopped", _configuration.DirectoryToMonitor);
+        _logger.LogInformation("Watcher {directory}  stopped", _configuration.DirectoryToMonitor);
     }
 }

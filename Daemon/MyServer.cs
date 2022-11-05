@@ -1,29 +1,26 @@
-using System.Net;
 using System.Net.Sockets;
+using Daemon.Configurations;
 using Daemon.NetCoreServer;
 
 namespace Daemon;
 
 public class MyServer : WsServer
 {
-    private readonly SubscriptionManager _subscriptionManager;
+    private readonly ISubscriptionManager _subscriptionManager;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<MyServer> _logger;
 
-    public MyServer(IPAddress address, int port) : base(address, port)
+    public MyServer(ServerConfiguration configuration, ISubscriptionManager subscriptionManager, ILoggerFactory loggerFactory) : base(configuration.IpAddress, configuration.Port)
     {
-        _subscriptionManager = new SubscriptionManager();
+        _subscriptionManager = subscriptionManager;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<MyServer>();
     }
     
-    protected override TcpSession CreateSession() { return new ClientSession(this, _subscriptionManager); }
+    protected override TcpSession CreateSession() => new ClientSession(this, _subscriptionManager, _loggerFactory.CreateLogger<ClientSession>());
 
     protected override void OnError(SocketError error)
     {
-        Console.WriteLine($"MyServer WebSocket server caught an error with code {error}");
-    }
-
-    protected override void Dispose(bool disposingManagedResources)
-    {
-        Console.WriteLine("MyServer WebSocket serverdisposed");
-        _subscriptionManager.Dispose();
-        base.Dispose(disposingManagedResources);
+        _logger.LogError("MyServer WebSocket server caught an error with code {error}", error);
     }
 }
