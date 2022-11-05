@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// Dynamic byte buffer

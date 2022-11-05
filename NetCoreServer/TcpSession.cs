@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Buffer = NetCoreServer.Buffer;
 
 namespace Daemon.NetCoreServer;
 

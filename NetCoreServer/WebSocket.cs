@@ -1,5 +1,6 @@
 using System.Text;
 using System.Security.Cryptography;
+using Buffer = NetCoreServer.Buffer;
 
 namespace Daemon.NetCoreServer;
 

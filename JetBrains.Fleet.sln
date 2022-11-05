@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daemon", "Daemon\Daemon.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{0903C7EC-5A01-4D1E-A557-E68276374B8A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCoreServer", "NetCoreServer\NetCoreServer.csproj", "{37FBCA4D-0BD7-452E-BDA7-1ECEBC72324A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{0903C7EC-5A01-4D1E-A557-E68276374B8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0903C7EC-5A01-4D1E-A557-E68276374B8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0903C7EC-5A01-4D1E-A557-E68276374B8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37FBCA4D-0BD7-452E-BDA7-1ECEBC72324A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37FBCA4D-0BD7-452E-BDA7-1ECEBC72324A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37FBCA4D-0BD7-452E-BDA7-1ECEBC72324A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37FBCA4D-0BD7-452E-BDA7-1ECEBC72324A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

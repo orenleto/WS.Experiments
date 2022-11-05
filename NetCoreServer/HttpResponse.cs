@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Buffer = NetCoreServer.Buffer;
 
 namespace Daemon.NetCoreServer;
 

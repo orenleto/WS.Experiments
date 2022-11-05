@@ -7,9 +7,9 @@ public class Program
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         var first = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 0);
-        var second = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 7500);
-        var third = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 2500);
-        var forth = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 5000);
+        var second = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 2500);
+        var third = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV/\"Non-existant folder\"", 5000);
+        var forth = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 7500);
         await Task.WhenAll(first, second, third, forth);
         //await third;
     }
