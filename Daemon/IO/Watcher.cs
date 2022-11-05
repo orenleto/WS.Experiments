@@ -10,24 +10,18 @@ namespace Daemon.IO;
 /// </summary>
 public sealed class Watcher : IDisposable
 {
-    private readonly CancellationToken _cancellationToken;
-    private readonly FileSystemEventConfiguration _configuration;
-    private readonly ManualResetEventSlim _initializedEvent = new();
-    private readonly ILogger<Watcher> _logger;
     private readonly object _syncRoot = new();
-    private Func<FileSystemEventArgs, ValueTask>? _callback;
-    private FileSystemEventCollection _collection;
+    private readonly ManualResetEventSlim _initializedEvent = new();
+    private readonly CancellationToken _cancellationToken;
+    
+    private readonly FileSystemEventConfiguration _configuration;
+    private readonly ILogger<Watcher> _logger;
     private readonly Thread _internalThread;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Watcher"/> class.
-    /// </summary>
-    /// <param name="configuration">     Initial configuration object </param>
-    /// <param name="cancellationToken"> Cancellation token to signal to stop watching </param>
-    /// <param name="logger">            Logger to use </param>
-    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null) : this(null, configuration, cancellationToken, logger)
-    {
-    }
+    
+    private Func<FileSystemEventArgs, ValueTask>? _callback;
+    private readonly Action<string>? _onTerminate;
+    
+    private FileSystemEventCollection _collection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Watcher"/> class.
@@ -36,12 +30,13 @@ public sealed class Watcher : IDisposable
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
-    public Watcher(Func<FileSystemEventArgs, ValueTask>? callback, FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null)
+    public Watcher(Func<FileSystemEventArgs, ValueTask>? callback, FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null, Action<string>? onTerminate = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
 
         _callback = callback;
+        _onTerminate = onTerminate;
         _cancellationToken = cancellationToken;
         _configuration = configuration;
         _logger = logger ?? NullLogger<Watcher>.Instance;
@@ -93,7 +88,7 @@ public sealed class Watcher : IDisposable
     public void Watch()
     {
         if (_callback is null)
-            throw new InvalidOperationException("Unable to watch with no callback to execute");
+            throw new InvalidOperationException("Unable to watch without callback to execute");
 
         _internalThread.Start();
         _initializedEvent.Wait(_cancellationToken);
@@ -106,7 +101,7 @@ public sealed class Watcher : IDisposable
     public void Dispose()
     {
         _initializedEvent.Dispose();
-        _collection?.Dispose();
+        _collection.Dispose();
     }
 
     private async void StartCollectionWatcher()
@@ -127,6 +122,7 @@ public sealed class Watcher : IDisposable
             await _callback!(collectionEnumerator.Current);
         }
 
+        _onTerminate?.Invoke(_configuration.DirectoryToMonitor);
         Console.WriteLine("Watcher by DIR [{0}] stopped", _configuration.DirectoryToMonitor);
     }
 }

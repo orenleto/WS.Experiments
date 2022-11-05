@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
 using JetBrains.Annotations;
+using Path = System.IO.Path;
 
 namespace Client;
 
@@ -27,10 +28,10 @@ public class MyProxyClass : IFileSystemDaemon
             // todo: использовать ResourceManager для текста ошибки
             throw new InvalidOperationException();
         
-        var command = new SubscribeChangesCommand(path);
+        var command = new SubscribeChangesRequest(path);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(command);
         if (!token.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
-            await _webSocket.SendAsync(bytes, WebSocketMessageType.Binary, WebSocketMessageFlags.EndOfMessage, token);
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, token);
         
         // todo: предусмотреть возможность подписки на разные директории;
         // как должны приходить события в один канал (логично по типу события) или для каждой директории свой канал (логично по возвращаемому типу)
@@ -110,5 +111,20 @@ public class MyProxyClass : IFileSystemDaemon
         }
     }
 
-    private record SubscribeChangesCommand([UsedImplicitly] string Path);
+    private interface IRequest
+    {
+        string MethodName { get; }
+    }
+
+    private struct SubscribeChangesRequest : IRequest
+    {
+        public string MethodName { get; }
+        public string Path { get; }
+
+        public SubscribeChangesRequest(string path)
+        {
+            MethodName = nameof(SubscribeChanges) + "-" + path.GetType().Name;
+            Path = path;
+        }
+    }
 }
