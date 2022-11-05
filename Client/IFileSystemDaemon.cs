@@ -1,6 +1,6 @@
 namespace Client;
 
-public interface IFileSystemDaemon
+internal interface IFileSystemDaemon
 {
     Task<CustomChannelReader<FileSystemEvent>> SubscribeChanges(string path);
 }

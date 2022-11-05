@@ -6,20 +6,30 @@ public class Program
     {
         var cts = new CancellationTokenSource();
         var token = cts.Token;
-        
-        var client = new Client("ws://localhost:5000/");
+        var first = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 0);
+        var second = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 7500);
+        var third = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 2500);
+        var forth = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 5000);
+        await Task.WhenAll(first, second, third, forth);
+        //await third;
+    }
+
+    private static async Task Process(CancellationToken token, string uri, string path, int delay)
+    {
+        await Task.Delay(delay, token);
+        var client = new Client(uri);
         var daemon = Proxy<IFileSystemDaemon>(client);
-        
+
         // absolute path is passed
-        var changesReader = await daemon.SubscribeChanges("/Users/uumka/Desktop/CV");
-        
+        var changesReader = await daemon.SubscribeChanges(path);
+
         var count = 0;
         while (await changesReader.WaitToReadAsync(token))
         {
             var fsEvent = await changesReader.ReadAsync(token);
             DumpEvent(fsEvent);
             count++;
-            if (count == 100)
+            if (count == 10)
             {
                 changesReader.Cancel(); // release fileSystemListener on remote machine
             }
@@ -31,7 +41,8 @@ public class Program
         Console.WriteLine(fileSystemEvent);
     }
 
-    private static IFileSystemDaemon Proxy<T>(Client client) => new MyProxyClass(client); 
+    private static IFileSystemDaemon Proxy<T>(Client client) => new MyProxyClass(client);
+    
     /*
     public static T Proxy<T>(Client client)
     {

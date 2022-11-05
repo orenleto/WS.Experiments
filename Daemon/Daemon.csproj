@@ -15,6 +15,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
         <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+        <PackageReference Include="TypeIndicatorConverter.TextJson" Version="1.0.0" />
     </ItemGroup>
 
 </Project>

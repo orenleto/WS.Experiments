@@ -1,8 +1,6 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
-using JetBrains.Annotations;
-using Path = System.IO.Path;
 
 namespace Client;
 
@@ -85,10 +83,24 @@ public class MyProxyClass : IFileSystemDaemon
                 {
                     if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close)
                     {
-                        var @event = JsonSerializer.Deserialize<FileSystemEvent>(new ReadOnlySpan<byte>(buffer.Array!, 0, receiveResult.Count));
-                        if (@event is not null)
+                        var message = JsonSerializer.Deserialize<Payload>(new ArraySegment<byte>(buffer.Array!, 0, receiveResult.Count));
+                        if (message is FileSystemEventPayload payload)
+                        {
+                            var @event = new FileSystemEvent(payload.ChangeType, payload.FullPath, payload.Name, payload.OldName);
                             await writer.WriteAsync(@event, cancellationToken);
-                        continue;
+                        }
+                        else if (message is SuccessEvent success)
+                        {
+                            Console.WriteLine("Успешная подписка на изменения директории {0}", success.Directory);
+                        }
+                        else if (message is ErrorEvent exception)
+                        {
+                            Console.WriteLine("Ошибка при подписке на изменения директории {0}: {1}", exception.Directory, exception.Message);
+                        }
+                        else if (message is ServerException serverException)
+                        {
+                            Console.WriteLine("Ошибка на стороне сервера в методе {0}: {1}", serverException.Method, serverException.Message);
+                        }
                     }
                     if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)
                     {
@@ -111,20 +123,6 @@ public class MyProxyClass : IFileSystemDaemon
         }
     }
 
-    private interface IRequest
-    {
-        string MethodName { get; }
-    }
-
-    private struct SubscribeChangesRequest : IRequest
-    {
-        public string MethodName { get; }
-        public string Path { get; }
-
-        public SubscribeChangesRequest(string path)
-        {
-            MethodName = nameof(SubscribeChanges) + "-" + path.GetType().Name;
-            Path = path;
-        }
-    }
 }
+
+public record FileSystemEvent(WatcherChangeTypes ChangeType, string FullPath, string? Name, string? OldName);

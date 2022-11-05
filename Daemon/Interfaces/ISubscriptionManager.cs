@@ -1,4 +1,6 @@
-namespace Daemon;
+using Daemon.Impl;
+
+namespace Daemon.Interfaces;
 
 public interface ISubscriptionManager
 {

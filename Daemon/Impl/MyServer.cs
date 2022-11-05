@@ -1,8 +1,9 @@
 using System.Net.Sockets;
 using Daemon.Configurations;
+using Daemon.Interfaces;
 using Daemon.NetCoreServer;
 
-namespace Daemon;
+namespace Daemon.Impl;
 
 public class MyServer : WsServer
 {

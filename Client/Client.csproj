@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
+      <PackageReference Include="TypeIndicatorConverter.TextJson" Version="1.0.0" />
     </ItemGroup>
 
 </Project>

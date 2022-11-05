@@ -1,8 +1,9 @@
 using System.Collections.Concurrent;
 using Daemon.Configurations;
+using Daemon.Interfaces;
 using Daemon.IO;
 
-namespace Daemon;
+namespace Daemon.Impl;
 
 public class SubscriptionManager : IDisposable, ISubscriptionManager
 {

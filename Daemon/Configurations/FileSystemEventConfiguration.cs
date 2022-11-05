@@ -3,7 +3,7 @@ namespace Daemon.Configurations;
 public class FileSystemEventConfiguration
 {
     /// <summary>
-    /// Intializes a new <see cref="FileSystemEventConfiguration"/>
+    /// Initializes a new <see cref="FileSystemEventConfiguration"/>
     /// </summary>
     /// <param name="directory">Directory to monitor</param>
     /// <param name="filePattern">File pattern to monitor within directory</param>

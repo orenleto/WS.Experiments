@@ -1,7 +1,8 @@
 using Daemon.Configurations;
+using Daemon.Interfaces;
 using Microsoft.Extensions.Options;
 
-namespace Daemon;
+namespace Daemon.Impl;
 
 public class WebSocketServerService : IHostedService, IDisposable
 {
