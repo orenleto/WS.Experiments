@@ -27,7 +27,7 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
         if (_watchers.TryGetValue(directory, out var watcher))
         {
             _logger.LogInformation("Client {clientId} subscribe on directory {directory}", clientSession.Id, directory);
-            watcher.AddCallback(clientSession.SendAsync);
+            watcher.AddCallback(clientSession.Send);
         }
         else
         {
@@ -36,12 +36,13 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
                 if (_watchers.TryGetValue(directory, out watcher))
                 {
                     _logger.LogInformation("Client {clientId} subscribe on directory {directory} from lock section", clientSession.Id, directory);
-                    watcher.AddCallback(clientSession.SendAsync);
+                    watcher.AddCallback(clientSession.Send);
                 }
                 else
                 {
                     _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
-                    watcher = new Watcher(clientSession.SendAsync, new FileSystemEventConfiguration(directory), _watcherTokenSource.Token, _loggerFactory.CreateLogger<Watcher>(), RemoveWatcher);
+                    watcher = new Watcher(new FileSystemEventConfiguration(directory), _watcherTokenSource.Token, _loggerFactory.CreateLogger<Watcher>(), RemoveWatcher);
+                    watcher.AddCallback(clientSession.Send);
                     watcher = _watchers.GetOrAdd(directory, watcher);
                     watcher.Watch();
                 }
@@ -67,7 +68,7 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
             foreach (var watcher in subscriptions.Intersect(_watchers.Values))
             {
                 _logger.LogInformation("Client {id} unsubscribed from {directory}", clientSession.Id, watcher.Directory);
-                watcher.RemoveCallback(clientSession.SendAsync);
+                watcher.RemoveCallback(clientSession.Send);
             }
         }
     }

@@ -18,7 +18,7 @@ public sealed class Watcher : IDisposable
     private readonly ILogger<Watcher> _logger;
     private readonly Thread _internalThread;
     
-    private Func<FileSystemEventArgs, ValueTask>? _callback;
+    private Action<FileSystemEventArgs>? _callback;
     private readonly Action<string>? _onTerminate;
     
     private FileSystemEventCollection _collection;
@@ -32,18 +32,17 @@ public sealed class Watcher : IDisposable
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
-    public Watcher(Func<FileSystemEventArgs, ValueTask>? callback, FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null, Action<string>? onTerminate = null)
+    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null, Action<string>? onTerminate = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
 
-        _callback = callback;
         _onTerminate = onTerminate;
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _configuration = configuration;
         _logger = logger ?? NullLogger<Watcher>.Instance;
 
-        _logger.Initializing<Watcher>(_callback is null ? "with no default callback" : "with default callback");
+        _logger.Initializing<Watcher>();
         lock (_syncRoot)
         {
             _internalThread = new Thread(StartCollectionWatcher);
@@ -54,7 +53,7 @@ public sealed class Watcher : IDisposable
     /// Add callback to current callback chain
     /// </summary>
     /// <param name="callback"> Callback to add to chain </param>
-    public void AddCallback(Func<FileSystemEventArgs, ValueTask> callback)
+    public void AddCallback(Action<FileSystemEventArgs> callback)
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
@@ -62,7 +61,7 @@ public sealed class Watcher : IDisposable
         lock (_syncRoot)
         {
             _callback += callback;
-            _logger.LogInformation("Watcher {directory} has one more subscriber", _configuration.DirectoryToMonitor);
+            _logger.LogInformation("Watcher {directory} has new subscriber", _configuration.DirectoryToMonitor);
         }
     }
 
@@ -70,7 +69,7 @@ public sealed class Watcher : IDisposable
     /// Remove callback from current callback chain
     /// </summary>
     /// <param name="callback"> Callback to remove from chain </param>
-    public void RemoveCallback(Func<FileSystemEventArgs, ValueTask> callback)
+    public void RemoveCallback(Action<FileSystemEventArgs> callback)
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
@@ -80,10 +79,9 @@ public sealed class Watcher : IDisposable
             _callback -= callback;
             if (_callback is null)
             {
-                _logger.LogInformation("Watcher {directory} stopping initialized", _configuration.DirectoryToMonitor);
+                _logger.LogInformation("Watcher {directory} stopping", _configuration.DirectoryToMonitor);
                 _cancellationTokenSource.Cancel();
             }
-
         }
     }
 
@@ -114,10 +112,10 @@ public sealed class Watcher : IDisposable
         _collection.Dispose();
     }
 
-    private async void StartCollectionWatcher()
+    private void StartCollectionWatcher()
     {
         var cancellationToken = _cancellationTokenSource.Token;
-        _logger.LogInformation("Watcher {directory}  started", _configuration.DirectoryToMonitor);
+        _logger.LogInformation("Watcher {directory} started", _configuration.DirectoryToMonitor);
         _collection = new FileSystemEventCollection(_configuration, cancellationToken);
 
         Task.Run(() =>
@@ -129,11 +127,11 @@ public sealed class Watcher : IDisposable
         using var collectionEnumerator = _collection.GetEnumerator();
         while (collectionEnumerator.MoveNext() && _callback is not null)
         {
-            _logger.LogInformation("Watcher {directory}  produce event {event}", _configuration.DirectoryToMonitor, collectionEnumerator.Current.Name);
-            await _callback!(collectionEnumerator.Current);
+            _logger.LogInformation("Watcher {directory} produce event {event}", _configuration.DirectoryToMonitor, collectionEnumerator.Current.Name);
+            _callback!(collectionEnumerator.Current);
         }
 
         _onTerminate?.Invoke(_configuration.DirectoryToMonitor);
-        _logger.LogInformation("Watcher {directory}  stopped", _configuration.DirectoryToMonitor);
+        _logger.LogInformation("Watcher {directory} stopped", _configuration.DirectoryToMonitor);
     }
 }

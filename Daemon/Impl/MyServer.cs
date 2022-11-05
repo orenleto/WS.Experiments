@@ -23,5 +23,6 @@ public class MyServer : WsServer
     protected override void OnError(SocketError error)
     {
         _logger.LogError("MyServer WebSocket server caught an error with code {error}", error);
+        base.OnError(error);
     }
 }
