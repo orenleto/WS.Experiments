@@ -7,11 +7,10 @@ public class Program
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         var first = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 0);
-        var second = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 2500);
+        var second = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/Tutorials", 2500);
         var third = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV/\"Non-existant folder\"", 5000);
         var forth = Process(token, "ws://localhost:5000/", "/Users/uumka/Desktop/CV", 7500);
         await Task.WhenAll(first, second, third, forth);
-        //await third;
     }
 
     private static async Task Process(CancellationToken token, string uri, string path, int delay)
@@ -34,6 +33,8 @@ public class Program
                 changesReader.Cancel(); // release fileSystemListener on remote machine
             }
         }
+
+        Console.WriteLine(delay * 100 + count);
     }
 
     private static void DumpEvent(FileSystemEvent fileSystemEvent)
@@ -41,8 +42,13 @@ public class Program
         Console.WriteLine(fileSystemEvent);
     }
 
-    private static IFileSystemDaemon Proxy<T>(Client client) => new MyProxyClass(client);
-    
+    private static IFileSystemDaemon Proxy<T>(Client client)
+    {
+        var myProxy = new MyProxyClass(client);
+        myProxy.Connect();
+        return myProxy;
+    }
+
     /*
     public static T Proxy<T>(Client client)
     {
