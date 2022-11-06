@@ -6,10 +6,10 @@ namespace Client;
 
 public class Program
 {
+    private static readonly CancellationTokenSource cts = new CancellationTokenSource();
     public static async Task Main()
     {
         var debugMode = false;
-        var cts = new CancellationTokenSource();
         var token = cts.Token;
         if (debugMode)
         {
@@ -56,7 +56,8 @@ public class Program
 
     private static IFileSystemDaemon Proxy<T>(Configurations.Client client)
     {
-        var myProxy = new MyProxyClass(client);
+        var myTransport = new WebSocketTransport(client.Uri, cts.Token);
+        var myProxy = new MyProxyClass(myTransport);
         myProxy.Connect();
         return myProxy;
     }

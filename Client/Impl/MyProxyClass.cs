@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
 using Client.Impl.Payloads;
@@ -10,116 +9,52 @@ namespace Client.Impl;
 
 public class MyProxyClass : IFileSystemDaemon
 {
-    private readonly CancellationTokenSource _networkConnectionTokenSource = new CancellationTokenSource();
-    private readonly ManualResetEventSlim _initializedEvent = new();
-    private readonly ManualResetEventSlim _cancellationEvent = new();
-    private readonly Configurations.Client _client;
-    private readonly ClientWebSocket _webSocket;
+    private readonly ITransport _transport;
     private readonly Channel<FileSystemEvent> _channel;
 
-    public MyProxyClass(Configurations.Client client)
+    public MyProxyClass(ITransport transport)
     {
-        _client = client;
-        _webSocket = new ClientWebSocket();
+        _transport = transport;
         _channel = Channel.CreateUnbounded<FileSystemEvent>();
     }
 
-    public void Connect()
-    {
-        if (_webSocket.State == WebSocketState.Open)
-            return;
-        if (_webSocket.State == WebSocketState.None)
-        {
-            _ = Task.Run(() => SocketProcessingLoopAsync().ConfigureAwait(false));
-            _initializedEvent.Wait(_networkConnectionTokenSource.Token);
-            return;
-        }
-
-        // todo: использовать ResourceManager для текста ошибки
-        throw new InvalidOperationException("Unable to connect closed websocket");
-    }
+    public void Connect() => _transport.Listen(SocketProcessingLoopAsync);
 
     public async Task<CustomChannelReader<FileSystemEvent>> SubscribeChanges(string directory)
     {
-        if (_webSocket.State != WebSocketState.Open)
-            throw new InvalidOperationException("Unable to send message by invalid websocket state");
-        
-        var token = _networkConnectionTokenSource.Token;
-        var command = new SubscribeChangesRequest{Directory = directory };
+        var command = new SubscribeChangesRequest { Directory = directory };
         var bytes = JsonSerializer.SerializeToUtf8Bytes(command);
-        if (!token.IsCancellationRequested && _webSocket.State == WebSocketState.Open)
-            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, token);
-
-        // todo: предусмотреть возможность подписки на разные директории;
-        // как должны приходить события в один канал (логично по типу события) или для каждой директории свой канал (логично по возвращаемому типу)
+        await _transport.SendAsync(new ArraySegment<byte>(bytes));
         return new CustomChannelReader<FileSystemEvent>(this, _channel.Reader);
     }
 
     public async Task Cancel()
     {
-        if (_webSocket.State != WebSocketState.Open)
-            return;
-        
-        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
-        _networkConnectionTokenSource.Cancel();
-        _cancellationEvent.Wait();
+        _transport.Stop();
+        _channel.Writer.Complete();
     }
 
-    private async Task SocketProcessingLoopAsync()
+    private async Task SocketProcessingLoopAsync(ArraySegment<byte> rawData, CancellationToken cancellationToken)
     {
-        var cancellationToken = _networkConnectionTokenSource.Token;
         var writer = _channel.Writer;
-        try
+        var message = JsonSerializer.Deserialize<Payload>(rawData);
+        if (message is MessagePayload payload)
         {
-            await _webSocket.ConnectAsync(_client.Uri, _networkConnectionTokenSource.Token);
-            _initializedEvent.Set();
-            
-            var buffer = WebSocket.CreateClientBuffer(4096, 4096);
-            while (_webSocket.State != WebSocketState.Closed && !cancellationToken.IsCancellationRequested)
-            {
-                var receiveResult = await _webSocket.ReceiveAsync(buffer, cancellationToken);
-                if (cancellationToken.IsCancellationRequested)
-                    continue;
-                
-                if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close)
-                {
-                    var message = JsonSerializer.Deserialize<Payload>(new ArraySegment<byte>(buffer.Array!, 0, receiveResult.Count));
-                    if (message is MessagePayload payload)
-                    {
-                        Console.WriteLine("Получили данные об изменениях в директории {0}", payload.FullPath);
-                        var @event = new FileSystemEvent(payload.ChangeType, payload.FullPath, payload.Name, payload.OldName);
-                        await writer.WriteAsync(@event, cancellationToken);
-                    }
-                    else if (message is SuccessPayload success)
-                    {
-                        Console.WriteLine("Успешное выполнение запроса {0}", success.Request.Method);
-                    }
-                    else if (message is ErrorPayload exception)
-                    {
-                        Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", exception.Request, string.Join(", ", exception.Errors));
-                    }
-                    else if (message is ExceptionPayload serverException)
-                    {
-                        Console.WriteLine("Исключение при выполнении запроса {0}: {1}", serverException.Request, serverException.Message);
-                    }
-                }
-                else if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)
-                {
-                    Console.WriteLine("Закрываем коннекцию – получили сообщение снаружи");
-                    await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledge Close frame", CancellationToken.None);
-                }
-            }
+            Console.WriteLine("Получили данные об изменениях в директории {0}", payload.FullPath);
+            var @event = new FileSystemEvent(payload.ChangeType, payload.FullPath, payload.Name, payload.OldName);
+            await writer.WriteAsync(@event, cancellationToken);
         }
-        catch (OperationCanceledException)
+        else if (message is SuccessPayload success)
         {
-            // normal upon task/token cancellation, disregard
+            Console.WriteLine("Успешное выполнение запроса {0}", success.Request.Method);
         }
-        finally
+        else if (message is ErrorPayload exception)
         {
-            Console.WriteLine("Закрываем коннекцию – отменили токен или произошло исключение");
-            _channel.Writer.Complete();
-            _cancellationEvent.Set();
-            _webSocket.Dispose();
+            Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", exception.Request, string.Join(", ", exception.Errors));
+        }
+        else if (message is ExceptionPayload serverException)
+        {
+            Console.WriteLine("Исключение при выполнении запроса {0}: {1}", serverException.Request, serverException.Message);
         }
     }
 }

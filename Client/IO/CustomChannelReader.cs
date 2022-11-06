@@ -25,9 +25,8 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead>
         return _reader.WaitToReadAsync(cancellationToken);
     }
 
-    public void Cancel()
+    public async void Cancel()
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000));
-        _ = Task.Run(_myProxy.Cancel, timeout.Token);
+        await _myProxy.Cancel();
     }
 }
