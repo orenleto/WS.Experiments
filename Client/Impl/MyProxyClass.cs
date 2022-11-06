@@ -1,19 +1,23 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
+using Client.Impl.Payloads;
+using Client.Impl.Requests;
+using Client.Interfaces;
+using Client.IO;
 
-namespace Client;
+namespace Client.Impl;
 
 public class MyProxyClass : IFileSystemDaemon
 {
     private readonly CancellationTokenSource _networkConnectionTokenSource = new CancellationTokenSource();
     private readonly ManualResetEventSlim _initializedEvent = new();
     private readonly ManualResetEventSlim _cancellationEvent = new();
-    private readonly Client _client;
+    private readonly Configurations.Client _client;
     private readonly ClientWebSocket _webSocket;
     private readonly Channel<FileSystemEvent> _channel;
 
-    public MyProxyClass(Client client)
+    public MyProxyClass(Configurations.Client client)
     {
         _client = client;
         _webSocket = new ClientWebSocket();

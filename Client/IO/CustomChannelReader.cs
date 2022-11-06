@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
+using Client.Impl;
 
-namespace Client;
+namespace Client.IO;
 
 public class CustomChannelReader<TRead> : ChannelReader<TRead>
 {

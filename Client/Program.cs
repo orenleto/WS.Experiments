@@ -1,3 +1,8 @@
+using Client.Impl;
+using Client.Impl.Payloads;
+using Client.Interfaces;
+using Client.IO;
+
 namespace Client;
 
 public class Program
@@ -16,7 +21,7 @@ public class Program
     private static async Task Process(CancellationToken token, string uri, string path, int delay)
     {
         await Task.Delay(delay, token);
-        var client = new Client(uri);
+        var client = new Configurations.Client(uri);
         var daemon = Proxy<IFileSystemDaemon>(client);
 
         // absolute path is passed
@@ -42,7 +47,7 @@ public class Program
         Console.WriteLine(fileSystemEvent);
     }
 
-    private static IFileSystemDaemon Proxy<T>(Client client)
+    private static IFileSystemDaemon Proxy<T>(Configurations.Client client)
     {
         var myProxy = new MyProxyClass(client);
         myProxy.Connect();

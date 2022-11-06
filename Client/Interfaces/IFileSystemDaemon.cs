@@ -1,4 +1,7 @@
-namespace Client;
+using Client.Impl.Payloads;
+using Client.IO;
+
+namespace Client.Interfaces;
 
 internal interface IFileSystemDaemon
 {

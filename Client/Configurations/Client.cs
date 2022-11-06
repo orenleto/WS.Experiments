@@ -1,4 +1,4 @@
-namespace Client;
+namespace Client.Configurations;
 
 public sealed class Client
 {

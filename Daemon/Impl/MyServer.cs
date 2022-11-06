@@ -20,6 +20,12 @@ public class MyServer : WsServer
     
     protected override TcpSession CreateSession() => new ClientSession(this, _subscriptionManager, _loggerFactory.CreateLogger<ClientSession>());
 
+    protected override void OnStarted()
+    {
+        base.OnStarted();
+        _logger.LogInformation("Start listening {Address}:{Port}", Address, Port);
+    }
+
     protected override void OnError(SocketError error)
     {
         _logger.LogError("MyServer WebSocket server caught an error with code {error}", error);
