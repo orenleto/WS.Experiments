@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Daemon.Impl.Payloads;
+namespace Daemon.Impl.Requests;
 
 [JsonConverter(typeof(TypeIndicatorConverter.TextJson.TypeIndicatorConverter<Request>))]
 public abstract class Request

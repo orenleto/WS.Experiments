@@ -1,6 +1,6 @@
 using TypeIndicatorConverter.Core.Attribute;
 
-namespace Daemon.Impl.Payloads;
+namespace Daemon.Impl.Requests;
 
 public class SubscribeChangesRequest : Request
 {

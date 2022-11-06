@@ -2,9 +2,9 @@ using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-internal class ServerException : Payload
+internal class ExceptionPayload : Payload
 {
-    public ServerException(string method, string message)
+    public ExceptionPayload(string method, string message)
     {
         Method = method;
         Message = message;

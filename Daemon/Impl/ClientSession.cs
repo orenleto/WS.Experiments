@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Daemon.Impl.Payloads;
+using Daemon.Impl.Requests;
 using Daemon.Interfaces;
 using Daemon.NetCoreServer;
 
@@ -40,28 +41,28 @@ public class ClientSession : WsSession
                 var directory = subscribeChangesRequest.Directory;
                 if (Directory.Exists(directory))
                 {
-                    var payload = new SuccessEvent(directory);
+                    var payload = new SuccessPayload(directory);
                     SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
                     _subscriptionManager.Subscribe(this, directory);
                 }
                 else
                 {
                     _logger.LogError("Try subscribe on non-existent directory {path}", directory);
-                    var payload = new ErrorEvent(directory, "Directory is not exists");
+                    var payload = new ErrorPayload(directory, "Directory is not exists");
                     SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
                 }
             }
             else
             {
                 _logger.LogError("Unimplemented method handler: {method}", request.Method);
-                var payload = new ServerException(request.Method, "Unimplemented method");
+                var payload = new ExceptionPayload(request.Method, "Unimplemented method");
                 SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Unexpected exception: {ex} ({body})", ex, Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, (int)offset, (int)size)));
-            var payload = new ServerException("Unknown method", "Unexpected exception");
+            var payload = new ExceptionPayload("Unknown method", "Unexpected exception");
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
         }
     }
@@ -72,8 +73,8 @@ public class ClientSession : WsSession
         {
             var payload = eventArgs switch
             {
-                RenamedEventArgs renamedEventArgs => new FileSystemEventPayload(renamedEventArgs.ChangeType, renamedEventArgs.FullPath, renamedEventArgs.Name, renamedEventArgs.OldName),
-                FileSystemEventArgs fileSystemEventArgs => new FileSystemEventPayload(fileSystemEventArgs.ChangeType, fileSystemEventArgs.FullPath, fileSystemEventArgs.Name, null),
+                RenamedEventArgs renamedEventArgs => new MessagePayload(renamedEventArgs.ChangeType, renamedEventArgs.FullPath, renamedEventArgs.Name, renamedEventArgs.OldName),
+                FileSystemEventArgs fileSystemEventArgs => new MessagePayload(fileSystemEventArgs.ChangeType, fileSystemEventArgs.FullPath, fileSystemEventArgs.Name, null),
                 _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
             };
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
@@ -81,7 +82,7 @@ public class ClientSession : WsSession
         catch (Exception ex)
         {
             _logger.LogError("Unexpected exception: {ex}", ex);
-            var payload = new ServerException("SubscribeChanges-String", "Unexpected exception");
+            var payload = new ExceptionPayload("SubscribeChanges-String", "Unexpected exception");
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
         }
     }

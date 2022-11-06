@@ -2,16 +2,14 @@ using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-internal class ErrorEvent : Payload
+internal class SuccessPayload : Payload
 {
-    public ErrorEvent(string directory, string message)
+    public SuccessPayload(string directory)
     {
-        Message = message;
         Directory = directory;
     }
 
     [TypeIndicator] public string Method => "SubscribeChanges-String";
-    [TypeIndicator] public PayloadType Type => PayloadType.Error;
+    [TypeIndicator] public PayloadType Type => PayloadType.Success;
     public string Directory { get; set; }
-    public string Message { get; set; }
 }

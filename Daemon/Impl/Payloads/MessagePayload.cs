@@ -2,9 +2,9 @@ using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-internal class FileSystemEventPayload : Payload
+internal class MessagePayload : Payload
 {
-    public FileSystemEventPayload(WatcherChangeTypes changeType, string fullPath, string? name, string? oldName)
+    public MessagePayload(WatcherChangeTypes changeType, string fullPath, string? name, string? oldName)
     {
         ChangeType = changeType;
         FullPath = fullPath;

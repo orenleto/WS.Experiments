@@ -18,14 +18,14 @@ internal abstract class Payload
     PayloadType Type { get; }
 }
 
-internal class SuccessEvent : Payload
+internal class SuccessPayload : Payload
 {
     [TypeIndicator] public string Method => "SubscribeChanges-String";
     [TypeIndicator] public PayloadType Type => PayloadType.Success;
     public string Directory { get; set; }
 }
 
-internal class FileSystemEventPayload : Payload
+internal class MessagePayload : Payload
 {
     [TypeIndicator] public string Method => "SubscribeChanges-String";
     [TypeIndicator] public PayloadType Type => PayloadType.Message;
@@ -35,7 +35,7 @@ internal class FileSystemEventPayload : Payload
     public string? OldName { get; set; }
 }
 
-internal class ErrorEvent : Payload
+internal class ErrorPayload : Payload
 {
     [TypeIndicator] public string Method => "SubscribeChanges-String";
     [TypeIndicator] public PayloadType Type => PayloadType.Error;
@@ -43,13 +43,15 @@ internal class ErrorEvent : Payload
     public string Message { get; set; }
 }
 
-internal class ServerException : Payload
+internal class ExceptionPayload : Payload
 {
     
     [TypeIndicator] public PayloadType Type => PayloadType.Exception;
     public string Method { get; set; }
     public string Message { get; set; }
 }
+
+public record FileSystemEvent(WatcherChangeTypes ChangeType, string FullPath, string? Name, string? OldName);
 
 
 [JsonConverter(typeof(TypeIndicatorConverter.TextJson.TypeIndicatorConverter<Request>))]
