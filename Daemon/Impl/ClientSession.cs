@@ -5,7 +5,6 @@ using Daemon.Impl.Payloads;
 using Daemon.Impl.Requests;
 using Daemon.Interfaces;
 using Daemon.NetCoreServer;
-using FluentResults;
 using MediatR;
 
 namespace Daemon.Impl;
@@ -46,9 +45,9 @@ public class ClientSession : WsSession
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Successfully complete {@request}", request);
-                    var payload = (SuccessPayload)result.Value;
-                    SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
-                    payload.Callback(this);
+                    var subscribeResult = result.Value;
+                    SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(subscribeResult.Payload));
+                    subscribeResult.Activate(this);
                 }
                 else
                 {

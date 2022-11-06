@@ -5,7 +5,7 @@ internal static class LoggerExtensions
     private static readonly Action<ILogger, Exception> _callbackOverride = LoggerMessage.Define(
         logLevel: LogLevel.Debug,
         eventId: new EventId(2, nameof(CallbackOverride)),
-        formatString: "Callback is being overridden");
+        formatString: "Activate is being overridden");
 
     private static readonly Action<ILogger, Exception> _cancellationRequested = LoggerMessage.Define(
         logLevel: LogLevel.Debug,

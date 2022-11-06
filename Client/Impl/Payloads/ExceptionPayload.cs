@@ -6,6 +6,6 @@ namespace Client.Impl.Payloads;
 public class ExceptionPayload : Payload
 {
     [TypeIndicator] public override PayloadType Type => PayloadType.Exception;
-    public Request? Request { get; set; }
-    public string Message { get; set; }
+    public Request? Request { get; init; }
+    public string Message { get; init; }
 }

@@ -14,8 +14,8 @@ public class MessagePayload : Payload
 
     [TypeIndicator] public string Method => "SubscribeChanges-String";
     [TypeIndicator] public override PayloadType Type => PayloadType.Message;
-    public WatcherChangeTypes ChangeType { get; set; }
-    public string FullPath { get; set; }
-    public string? Name { get; set; }
-    public string? OldName { get; set; }
+    public WatcherChangeTypes ChangeType { get; init; }
+    public string FullPath { get; init; }
+    public string? Name { get; init; }
+    public string? OldName { get; init; }
 }

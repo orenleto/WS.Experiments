@@ -8,7 +8,7 @@ using MediatR;
 namespace Daemon.Handlers;
 
 [UsedImplicitly]
-public class SubscribeChangesHandler : IRequestHandler<SubscribeChangesRequest, Result<Payload>>
+public class SubscribeChangesHandler : IRequestHandler<SubscribeChangesRequest, Result<SubscribeResult>>
 {
     private readonly ISubscriptionManager _subscriptionManager;
 
@@ -17,15 +17,16 @@ public class SubscribeChangesHandler : IRequestHandler<SubscribeChangesRequest, 
         _subscriptionManager = subscriptionManager;
     }
     
-    public Task<Result<Payload>> Handle(SubscribeChangesRequest request, CancellationToken cancellationToken)
+    public Task<Result<SubscribeResult>> Handle(SubscribeChangesRequest request, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(request.Directory))
-            return Task.FromResult(Result.Fail<Payload>("Directory is not exist"));
+            return Task.FromResult(Result.Fail<SubscribeResult>("Directory is not exist"));
 
-        var successPayload = new SuccessPayload {
-            Request = request,
-            Callback = clientSession => _subscriptionManager.Subscribe(clientSession, request.Directory)
+        var result = new SubscribeResult
+        {
+            Payload = new SuccessPayload { Request = request },
+            Activate = clientSession => _subscriptionManager.Subscribe(clientSession, request.Directory),
         };
-        return Task.FromResult(Result.Ok<Payload>(successPayload));
+        return Task.FromResult(Result.Ok(result));
     }
 }

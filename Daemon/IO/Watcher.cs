@@ -28,7 +28,7 @@ public sealed class Watcher : IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="Watcher"/> class.
     /// </summary>
-    /// <param name="callback">             Callback to execute on new file system event </param>
+    /// <param name="callback">             Activate to execute on new file system event </param>
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
@@ -52,7 +52,7 @@ public sealed class Watcher : IDisposable
     /// <summary>
     /// Add callback to current callback chain
     /// </summary>
-    /// <param name="callback"> Callback to add to chain </param>
+    /// <param name="callback"> Activate to add to chain </param>
     public void AddCallback(Action<FileSystemEventArgs> callback)
     {
         if (callback is null)
@@ -68,7 +68,7 @@ public sealed class Watcher : IDisposable
     /// <summary>
     /// Remove callback from current callback chain
     /// </summary>
-    /// <param name="callback"> Callback to remove from chain </param>
+    /// <param name="callback"> Activate to remove from chain </param>
     public void RemoveCallback(Action<FileSystemEventArgs> callback)
     {
         if (callback is null)
@@ -88,7 +88,7 @@ public sealed class Watcher : IDisposable
     /// <summary>
     /// Begin monitoring directory for file changes
     /// </summary>
-    /// <param name="callback"> Callback to execute when file system event occurs </param>
+    /// <param name="callback"> Activate to execute when file system event occurs </param>
     /// <exception cref="InvalidOperationException">
     /// Thrown if no callbacks available to execute
     /// </exception>
