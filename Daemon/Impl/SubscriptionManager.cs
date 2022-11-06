@@ -10,9 +10,9 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<SubscriptionManager> _logger;
     private readonly object _syncRoot = new object();
-    
+
     private readonly CancellationTokenSource _watcherTokenSource = new CancellationTokenSource();
-    
+
     private readonly ConcurrentDictionary<string, Watcher> _watchers = new ConcurrentDictionary<string, Watcher>();
     private readonly ConcurrentDictionary<Guid, LinkedList<Watcher>> _subscriptions = new ConcurrentDictionary<Guid, LinkedList<Watcher>>();
 
@@ -21,7 +21,7 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<SubscriptionManager>();
     }
-    
+
     public void Subscribe(ClientSession clientSession, string directory)
     {
         if (_watchers.TryGetValue(directory, out var watcher))
@@ -38,17 +38,16 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
                     _logger.LogInformation("Client {clientId} subscribe on directory {directory} from lock section", clientSession.Id, directory);
                     watcher.AddCallback(clientSession.Send);
                 }
-                else
-                {
-                    _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
-                    watcher = new Watcher(new FileSystemEventConfiguration(directory), _watcherTokenSource.Token, _loggerFactory.CreateLogger<Watcher>(), RemoveWatcher);
-                    watcher.AddCallback(clientSession.Send);
-                    watcher = _watchers.GetOrAdd(directory, watcher);
-                    watcher.Watch();
-                }
+
+                _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
+                var newWatcher = new Watcher(new FileSystemEventConfiguration(directory), _watcherTokenSource.Token,
+                    _loggerFactory.CreateLogger<Watcher>(), RemoveWatcher);
+                watcher = _watchers.GetOrAdd(directory, newWatcher);
+                watcher.AddCallback(clientSession.Send);
+                watcher.Watch();
             }
         }
-        
+
         var subscriptions = _subscriptions.GetOrAdd(clientSession.Id, _ => new LinkedList<Watcher>());
         lock (subscriptions)
         {
@@ -72,7 +71,7 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
             }
         }
     }
-    
+
     public void Dispose()
     {
         _watcherTokenSource.Cancel();
@@ -86,6 +85,5 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
             if (_watchers.TryRemove(directory, out var watcher))
                 watcher.Dispose();
         }
-        
     }
 }

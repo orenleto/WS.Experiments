@@ -1,6 +1,6 @@
 namespace Client.Impl.Payloads;
 
-internal enum PayloadType
+public enum PayloadType
 {
     Exception = -1,
     Success = 1,

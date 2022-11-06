@@ -39,13 +39,13 @@ public class MyProxyClass : IFileSystemDaemon
         throw new InvalidOperationException("Unable to connect closed websocket");
     }
 
-    public async Task<CustomChannelReader<FileSystemEvent>> SubscribeChanges(string path)
+    public async Task<CustomChannelReader<FileSystemEvent>> SubscribeChanges(string directory)
     {
         if (_webSocket.State != WebSocketState.Open)
             throw new InvalidOperationException("Unable to send message by invalid websocket state");
         
         var token = _networkConnectionTokenSource.Token;
-        var command = new SubscribeChangesRequest(path);
+        var command = new SubscribeChangesRequest{Directory = directory };
         var bytes = JsonSerializer.SerializeToUtf8Bytes(command);
         if (!token.IsCancellationRequested && _webSocket.State == WebSocketState.Open)
             await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, token);
@@ -92,15 +92,15 @@ public class MyProxyClass : IFileSystemDaemon
                     }
                     else if (message is SuccessPayload success)
                     {
-                        Console.WriteLine("Успешная подписка на изменения директории {0}", success.Directory);
+                        Console.WriteLine("Успешное выполнение запроса {0}", success.Request.Method);
                     }
                     else if (message is ErrorPayload exception)
                     {
-                        Console.WriteLine("Ошибка при подписке на изменения директории {0}: {1}", exception.Directory, exception.Message);
+                        Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", exception.Request, string.Join(", ", exception.Errors));
                     }
                     else if (message is ExceptionPayload serverException)
                     {
-                        Console.WriteLine("Ошибка на стороне сервера в методе {0}: {1}", serverException.Method, serverException.Message);
+                        Console.WriteLine("Исключение при выполнении запроса {0}: {1}", serverException.Request, serverException.Message);
                     }
                 }
                 else if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)

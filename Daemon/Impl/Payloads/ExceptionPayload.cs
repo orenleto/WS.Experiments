@@ -1,16 +1,11 @@
+using Daemon.Impl.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-internal class ExceptionPayload : Payload
+public class ExceptionPayload : Payload
 {
-    public ExceptionPayload(string method, string message)
-    {
-        Method = method;
-        Message = message;
-    }
-    
-    [TypeIndicator] public PayloadType Type => PayloadType.Exception;
-    public string Method { get; }
-    public string Message { get; }
+    [TypeIndicator] public override PayloadType Type => PayloadType.Exception;
+    public Request? Request { get; set; }
+    public string Message { get; set; }
 }

@@ -1,5 +1,6 @@
 using Daemon.Configurations;
 using Daemon.Interfaces;
+using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace Daemon.Impl;
@@ -10,12 +11,13 @@ public class WebSocketServerService : IHostedService, IDisposable
     private readonly ILogger<WebSocketServerService> _logger;
 
     public WebSocketServerService(
+        IMediator mediator,
         ISubscriptionManager subscriptionManager,
         IOptions<ServerConfiguration> configuration,
         ILoggerFactory loggerFactory
     )
     {
-        _server = new MyServer(configuration.Value, subscriptionManager, loggerFactory);
+        _server = new MyServer(configuration.Value, mediator, subscriptionManager, loggerFactory);
         _logger = loggerFactory.CreateLogger<WebSocketServerService>();
     }
 

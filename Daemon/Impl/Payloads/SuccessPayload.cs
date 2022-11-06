@@ -1,15 +1,11 @@
+using Daemon.Impl.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-internal class SuccessPayload : Payload
+public class SuccessPayload : Payload
 {
-    public SuccessPayload(string directory)
-    {
-        Directory = directory;
-    }
-
-    [TypeIndicator] public string Method => "SubscribeChanges-String";
-    [TypeIndicator] public PayloadType Type => PayloadType.Success;
-    public string Directory { get; set; }
+    [TypeIndicator] public override PayloadType Type => PayloadType.Success;
+    public Request Request { get; set; }
+    internal Action<ClientSession> Callback { get; set; }
 }

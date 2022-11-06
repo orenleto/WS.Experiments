@@ -1,6 +1,9 @@
-﻿using Daemon.Configurations;
+﻿using System.Reflection;
+using Daemon.Configurations;
 using Daemon.Impl;
+using Daemon.Impl.Requests;
 using Daemon.Interfaces;
+using MediatR;
 
 class Program
 {
@@ -15,6 +18,7 @@ class Program
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddOptions();
+                services.AddMediatR(typeof(Request));
                 services.Configure<ServerConfiguration>(hostContext.Configuration.GetSection("Server"));
                 services.AddSingleton<ISubscriptionManager, SubscriptionManager>();
                 services.AddHostedService<WebSocketServerService>();

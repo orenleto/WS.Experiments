@@ -1,11 +1,11 @@
+using Client.Impl.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
 namespace Client.Impl.Payloads;
 
-internal class ExceptionPayload : Payload
+public class ExceptionPayload : Payload
 {
-    
-    [TypeIndicator] public PayloadType Type => PayloadType.Exception;
-    public string Method { get; set; }
+    [TypeIndicator] public override PayloadType Type => PayloadType.Exception;
+    public Request? Request { get; set; }
     public string Message { get; set; }
 }
