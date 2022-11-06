@@ -9,6 +9,8 @@
 
     <ItemGroup>
       <PackageReference Include="FluentResults" Version="3.14.0" />
+      <PackageReference Include="Polly" Version="7.2.3" />
+      <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
       <PackageReference Include="TypeIndicatorConverter.TextJson" Version="1.0.0" />
     </ItemGroup>
 

@@ -1,36 +1,54 @@
 using System.Net.WebSockets;
 using Client.Interfaces;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
 
 namespace Client.Impl;
 
 public class WebSocketTransport : ITransport
 {
+    private static readonly IAsyncPolicy _retryPolicy = Policy
+        .Handle<WebSocketException>()
+        .WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 4));
+
     private readonly Uri _uri;
     private readonly CancellationTokenSource _transportTokenSource;
-    private readonly ClientWebSocket _webSocket;
     private readonly ManualResetEventSlim _initializedEvent = new();
     private readonly ManualResetEventSlim _stopProcessingLoopEvent = new();
 
+    private ClientWebSocket? _webSocket;
+    
     public WebSocketTransport(Uri uri, CancellationToken cancellationToken)
     {
         _uri = uri;
-        _webSocket = new ClientWebSocket();
         _transportTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
     }
 
-    public Task Listen(Func<ArraySegment<byte>, CancellationToken, Task> continuation)
+    public async Task Listen(Func<ArraySegment<byte>, CancellationToken, Task> continuation)
     {
-        if (_webSocket.State == WebSocketState.Open)
-            return Task.CompletedTask;
-        if (_webSocket.State == WebSocketState.None)
+        if (_webSocket is null)
         {
+            try
+            {
+                await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    Console.WriteLine(DateTime.UtcNow.ToString("O"));
+                    _webSocket = new ClientWebSocket();
+                    await _webSocket.ConnectAsync(_uri, _transportTokenSource.Token);
+                    _initializedEvent.Set();
+                });
+            }
+            catch (WebSocketException)
+            {
+                _transportTokenSource.Cancel();
+                throw;
+            }
+            
             _ = Task.Run(() => SocketProcessingLoopAsync(continuation).ConfigureAwait(false));
-            _initializedEvent.Wait(_transportTokenSource.Token);
-            return Task.CompletedTask;
         }
-
-        // todo: использовать ResourceManager для текста ошибки
-        throw new InvalidOperationException("Unable to connect closed websocket");
+        else if (_webSocket.State != WebSocketState.Open)
+            // todo: использовать ResourceManager для текста ошибки
+            throw new InvalidOperationException("Unable to connect closed websocket");
     }
 
     public void Stop()
@@ -41,14 +59,15 @@ public class WebSocketTransport : ITransport
     
     public async Task SendAsync(ArraySegment<byte> data)
     {
-        if (_webSocket.State != WebSocketState.Open)
+        _initializedEvent.Wait(_transportTokenSource.Token);
+        if (_webSocket!.State != WebSocketState.Open)
             throw new InvalidOperationException("Unable to send message by invalid websocket state");
         await _webSocket.SendAsync(data, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, _transportTokenSource.Token);
     }
 
     private async Task<ArraySegment<byte>> ReceiveAsync(ArraySegment<byte> buffer)
     {
-        var receiveResult = await _webSocket.ReceiveAsync(buffer, _transportTokenSource.Token);
+        var receiveResult = await _webSocket!.ReceiveAsync(buffer, _transportTokenSource.Token);
         if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close)
         {
            return new ArraySegment<byte>(buffer.Array!, 0, receiveResult.Count);
@@ -65,13 +84,11 @@ public class WebSocketTransport : ITransport
     private async Task SocketProcessingLoopAsync(Func<ArraySegment<byte>, CancellationToken, Task> continuation)
     {
         var cancellationToken = _transportTokenSource.Token;
+        _initializedEvent.Wait(cancellationToken);
         try
         {
-            await _webSocket.ConnectAsync(_uri, cancellationToken);
-            _initializedEvent.Set();
-            
             var buffer = WebSocket.CreateClientBuffer(28 * 1024, 4 * 1024);
-            while (_webSocket.State != WebSocketState.Closed && !cancellationToken.IsCancellationRequested)
+            while (_webSocket!.State != WebSocketState.Closed && !cancellationToken.IsCancellationRequested)
             {
                 var rawData = await ReceiveAsync(buffer);
                 if (cancellationToken.IsCancellationRequested)
@@ -94,6 +111,5 @@ public class WebSocketTransport : ITransport
     {
         _transportTokenSource.Dispose();
         _stopProcessingLoopEvent.Dispose();
-        _initializedEvent.Dispose();
     }
 }

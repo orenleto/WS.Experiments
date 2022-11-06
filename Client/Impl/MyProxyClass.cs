@@ -28,10 +28,11 @@ public class MyProxyClass : IFileSystemDaemon
         return new CustomChannelReader<FileSystemEvent>(this, _channel.Reader);
     }
 
-    public async Task Cancel()
+    public Task Cancel()
     {
         _transport.Stop();
         _channel.Writer.Complete();
+        return Task.CompletedTask;
     }
 
     private async Task SocketProcessingLoopAsync(ArraySegment<byte> rawData, CancellationToken cancellationToken)
