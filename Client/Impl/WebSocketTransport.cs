@@ -102,13 +102,10 @@ public class WebSocketTransport : ITransport
                 if (_webSocket.State == WebSocketState.Open && _continuations is not null)
                     await _continuations(rawData, cancellationToken);
             }
-
-            Console.WriteLine("Тут побывали");
         }
         catch (OperationCanceledException)
         {
             // normal upon task/token cancellation, disregard
-            Console.WriteLine("Сюда зашли");
         }
         finally
         {

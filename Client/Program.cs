@@ -11,6 +11,7 @@ public class Program
 {
     private static readonly CancellationTokenSource _cts = new CancellationTokenSource();
     private static readonly ProxyGenerator _generator = new ProxyGenerator();
+    
     public static async Task Main()
     {
         var debugMode = false;
@@ -42,21 +43,19 @@ public class Program
         while (await changesReader.WaitToReadAsync(token))
         {
             var fsEvent = await changesReader.ReadAsync(token);
-            DumpEvent(fsEvent, count);
             count++;
-            if (count == 10)
+            DumpEvent(fsEvent);
+            if (count == 100)
             {
                 changesReader.Cancel(); // release fileSystemListener on remote machine
             }
         }
-        Console.WriteLine(delay * 100 + count);
+        
+        static void DumpEvent(FileSystemEvent fileSystemEvent)
+        {
+        }
     }
-
-    private static void DumpEvent(FileSystemEvent fileSystemEvent, int count)
-    {
-        Console.WriteLine(fileSystemEvent + " ===> " + count);
-    }
-
+    
     private static T Proxy<T>(Configurations.Client client)
     {
         var webSocketTransport = new WebSocketTransport(client.Uri, _cts.Token);
