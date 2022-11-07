@@ -1,7 +1,6 @@
-using Client.Impl.Payloads;
-using Client.IO;
+using Daemon.Contracts.Payloads.Events;
 
-namespace Client.Interfaces;
+namespace Daemon.Contracts;
 
 public interface IFileSystemDaemon
 {

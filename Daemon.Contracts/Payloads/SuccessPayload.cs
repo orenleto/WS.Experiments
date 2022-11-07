@@ -1,7 +1,7 @@
-using Daemon.Impl.Requests;
+using Daemon.Contracts.Payloads.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
-namespace Daemon.Impl.Payloads;
+namespace Daemon.Contracts.Payloads;
 
 public class SuccessPayload : Payload
 {

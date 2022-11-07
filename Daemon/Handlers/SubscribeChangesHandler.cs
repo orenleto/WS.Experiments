@@ -1,4 +1,4 @@
-using Daemon.Impl.Payloads;
+using Daemon.Contracts.Payloads;
 using Daemon.Impl.Requests;
 using Daemon.Interfaces;
 using FluentResults;

@@ -1,7 +1,7 @@
-using Client.Impl.Requests;
+using Daemon.Contracts.Payloads.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
-namespace Client.Impl.Payloads;
+namespace Daemon.Contracts.Payloads;
 
 public class ExceptionPayload : Payload
 {

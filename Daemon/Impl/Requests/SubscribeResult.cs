@@ -1,4 +1,4 @@
-using Daemon.Impl.Payloads;
+using Daemon.Contracts.Payloads;
 
 namespace Daemon.Impl.Requests;
 

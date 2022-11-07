@@ -1,10 +1,10 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-using Client.Impl.Requests;
+using Daemon.Contracts.Payloads.Requests;
 using TypeIndicatorConverter.Core.Attribute;
 
-namespace Client.Impl;
+namespace Daemon.Contracts;
 
 public static class Generator
 {
@@ -28,12 +28,15 @@ public static class Generator
 
         // The module name is usually the same as the assembly name.
         ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly.Name);
+
+        Type baseType = typeof(Request);
+        ConstructorInfo baseCtor = baseType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, Type.EmptyTypes);
         
         //create the class
         TypeBuilder typeBuilder = moduleBuilder.DefineType(
             methodName.ToString(),
             TypeAttributes.Public | TypeAttributes.AutoClass | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit,
-            typeof(Request)
+            baseType
         );
 
         var fieldBuilders = new FieldBuilder[parameters.Length];
@@ -114,22 +117,22 @@ public static class Generator
             pbNumber.SetSetMethod(mbNumberSetAccessor);
         }
         
-        PropertyBuilder pbMethod = typeBuilder.DefineProperty(
-            "Method",
-            PropertyAttributes.HasDefault,
-            typeof(string),
-            null);
-        
         MethodBuilder mbGetMethod = typeBuilder.DefineMethod(
-            "get_Method",
-            getSetAttr,
+            $"get_{nameof(Request.Method)}",
+            getSetAttr | MethodAttributes.Virtual,
             typeof(string),
             Type.EmptyTypes
         );
 
-        ILGenerator getMethodIL = mbGetMethod.GetILGenerator();
-        getMethodIL.Emit(OpCodes.Ldstr, alias.ToString());
-        getMethodIL.Emit(OpCodes.Ret);
+        ILGenerator methodGetIL = mbGetMethod.GetILGenerator();
+        methodGetIL.Emit(OpCodes.Ldstr, alias.ToString());
+        methodGetIL.Emit(OpCodes.Ret);
+        
+        PropertyBuilder pbMethod = typeBuilder.DefineProperty(
+            nameof(Request.Method),
+            PropertyAttributes.HasDefault,
+            typeof(string),
+            null);
         
         pbMethod.SetGetMethod(mbGetMethod);
 
@@ -143,6 +146,8 @@ public static class Generator
             CallingConventions.Standard,
             Type.EmptyTypes);
         ILGenerator ctor0Il = ctor0.GetILGenerator();
+        ctor0Il.Emit(OpCodes.Ldarg_0);
+        ctor0Il.Emit(OpCodes.Call, baseCtor);
         ctor0Il.Emit(OpCodes.Ret);
 
         // Define a constructor that takes an integer argument and
@@ -159,7 +164,7 @@ public static class Generator
         // base class (System.Object) by passing an empty array of
         // types (Type.EmptyTypes) to GetConstructor.
         ctor1Il.Emit(OpCodes.Ldarg_0);
-        ctor1Il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes));
+        ctor1Il.Emit(OpCodes.Call, baseCtor);
         // Push the instance on the stack before pushing the argument
         // that is to be assigned to the private field m_number.
         for (i = 0; i < parameters.Length; ++i)

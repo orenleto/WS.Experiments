@@ -17,7 +17,7 @@ class Program
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddOptions();
-                services.AddMediatR(typeof(Request));
+                services.AddMediatR(typeof(Program));
                 services.Configure<ServerConfiguration>(hostContext.Configuration.GetSection("Server"));
                 services.AddSingleton<ISubscriptionManager, SubscriptionManager>();
                 services.AddHostedService<WebSocketServerService>();

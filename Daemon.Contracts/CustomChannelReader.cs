@@ -1,16 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using Client.Impl;
-using Client.Impl.Payloads;
+using Daemon.Contracts.Payloads;
 
-namespace Client.IO;
+namespace Daemon.Contracts;
 
-public class CustomChannelReader<TRead> : ChannelReader<TRead> where TRead : Payload
+public class CustomChannelReader<TRead> : ChannelReader<TRead>, ICancelable where TRead : Payload
 {
-    private readonly ProxyInterceptor _proxy;
+    private readonly ICancelable _proxy;
     private readonly ChannelReader<TRead> _reader;
 
-    public CustomChannelReader(ProxyInterceptor proxy, ChannelReader<TRead> reader)
+    public CustomChannelReader(ICancelable proxy, ChannelReader<TRead> reader)
     {
         _proxy = proxy;
         _reader = reader;
@@ -26,7 +25,7 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead> where TRead : Pay
         return _reader.WaitToReadAsync(cancellationToken);
     }
 
-    public async void Cancel()
+    public async Task Cancel()
     {
         await _proxy.Cancel();
     }

@@ -1,4 +1,4 @@
-namespace Client.Impl.Payloads;
+namespace Daemon.Contracts.Payloads;
 
 public enum PayloadType
 {

@@ -4,14 +4,14 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Castle.DynamicProxy;
-using Client.Impl.Payloads;
-using Client.Impl.Requests;
 using Client.Interfaces;
-using Client.IO;
+using Daemon.Contracts;
+using Daemon.Contracts.Payloads;
+using Daemon.Contracts.Payloads.Events;
 
 namespace Client.Impl;
 
-public class ProxyInterceptor : IInterceptor
+public class ProxyInterceptor : IInterceptor, ICancelable
 {
     private static readonly ConcurrentDictionary<MethodInfo, Type> _dataTransferTypes = new ConcurrentDictionary<MethodInfo, Type>();
     

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Daemon.Impl.Payloads;
+namespace Daemon.Contracts.Payloads;
 
 [JsonConverter(typeof(TypeIndicatorConverter.TextJson.TypeIndicatorConverter<Payload>))]
 public abstract class Payload

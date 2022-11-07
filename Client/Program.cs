@@ -1,7 +1,9 @@
 using Castle.DynamicProxy;
 using Client.Impl;
-using Client.Impl.Payloads;
 using Client.Interfaces;
+using Daemon.Contracts;
+using Daemon.Contracts.Payloads;
+using Daemon.Contracts.Payloads.Events;
 
 namespace Client;
 

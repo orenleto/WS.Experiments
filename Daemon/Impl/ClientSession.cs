@@ -1,10 +1,13 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using Daemon.Impl.Payloads;
+using Daemon.Contracts.Payloads;
+using Daemon.Contracts.Payloads.Events;
+using Daemon.Contracts.Payloads.Requests;
 using Daemon.Impl.Requests;
 using Daemon.Interfaces;
 using Daemon.NetCoreServer;
+using FluentResults;
 using MediatR;
 
 namespace Daemon.Impl;
@@ -39,9 +42,9 @@ public class ClientSession : WsSession
         try
         {
             var request = JsonSerializer.Deserialize<Request>(new ArraySegment<byte>(buffer, (int)offset, (int)size));
-            if (request is not null)
+            if (request is not null && request is IRequest<Result<SubscribeResult>> subscribeCommand)
             {
-                var result = await _mediator.Send(request);
+                var result = await _mediator.Send(subscribeCommand);
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Successfully complete {@request}", request);
@@ -90,8 +93,8 @@ public class ClientSession : WsSession
         {
             var payload = eventArgs switch
             {
-                RenamedEventArgs rename => FileSystemEvent.Create(rename.ChangeType, rename.FullPath, rename.Name, rename.OldName),
-                FileSystemEventArgs fileEvent => FileSystemEvent.Create(fileEvent.ChangeType, fileEvent.FullPath, fileEvent.Name, null),
+                RenamedEventArgs rename => new FileSystemEvent { ChangeType = rename.ChangeType, FullPath = rename.FullPath, Name = rename.Name, OldName = rename.OldName},
+                FileSystemEventArgs fileEvent => new FileSystemEvent { ChangeType = fileEvent.ChangeType, FullPath = fileEvent.FullPath, Name = fileEvent.Name, OldName = null},
                 _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
             };
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
