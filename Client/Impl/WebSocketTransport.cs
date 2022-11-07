@@ -15,7 +15,8 @@ public class WebSocketTransport : ITransport
     private readonly CancellationTokenSource _transportTokenSource;
     private readonly ManualResetEventSlim _initializedEvent = new();
     private readonly ManualResetEventSlim _stopProcessingLoopEvent = new();
-
+    
+    private Func<ArraySegment<byte>, CancellationToken, Task>? _continuations;
     private ClientWebSocket? _webSocket;
     
     public WebSocketTransport(Uri uri, CancellationToken cancellationToken)
@@ -32,9 +33,9 @@ public class WebSocketTransport : ITransport
             {
                 await _retryPolicy.ExecuteAsync(async () =>
                 {
-                    Console.WriteLine(DateTime.UtcNow.ToString("O"));
                     _webSocket = new ClientWebSocket();
                     await _webSocket.ConnectAsync(_uri, _transportTokenSource.Token);
+                    _continuations += continuation;
                     _initializedEvent.Set();
                 });
             }
@@ -43,12 +44,17 @@ public class WebSocketTransport : ITransport
                 _transportTokenSource.Cancel();
                 throw;
             }
-            
-            _ = Task.Run(() => SocketProcessingLoopAsync(continuation).ConfigureAwait(false));
+
+            _ = Task.Run(() => SocketProcessingLoopAsync().ConfigureAwait(false));
         }
-        else if (_webSocket.State != WebSocketState.Open)
+        else if (_webSocket.State == WebSocketState.Open)
+        {
+        }
+        else
+        {
             // todo: использовать ResourceManager для текста ошибки
             throw new InvalidOperationException("Unable to connect closed websocket");
+        }
     }
 
     public void Stop()
@@ -81,7 +87,7 @@ public class WebSocketTransport : ITransport
         return ArraySegment<byte>.Empty;
     }
 
-    private async Task SocketProcessingLoopAsync(Func<ArraySegment<byte>, CancellationToken, Task> continuation)
+    private async Task SocketProcessingLoopAsync()
     {
         var cancellationToken = _transportTokenSource.Token;
         _initializedEvent.Wait(cancellationToken);
@@ -93,13 +99,16 @@ public class WebSocketTransport : ITransport
                 var rawData = await ReceiveAsync(buffer);
                 if (cancellationToken.IsCancellationRequested)
                     continue;
-                if (_webSocket.State == WebSocketState.Open)
-                    await continuation(rawData, cancellationToken);
+                if (_webSocket.State == WebSocketState.Open && _continuations is not null)
+                    await _continuations(rawData, cancellationToken);
             }
+
+            Console.WriteLine("Тут побывали");
         }
         catch (OperationCanceledException)
         {
             // normal upon task/token cancellation, disregard
+            Console.WriteLine("Сюда зашли");
         }
         finally
         {

@@ -3,7 +3,7 @@ using Client.IO;
 
 namespace Client.Interfaces;
 
-internal interface IFileSystemDaemon
+public interface IFileSystemDaemon
 {
     Task<CustomChannelReader<FileSystemEvent>> SubscribeChanges(string directory);
 }

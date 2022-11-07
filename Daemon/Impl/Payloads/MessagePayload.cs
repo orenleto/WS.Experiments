@@ -2,16 +2,19 @@ using TypeIndicatorConverter.Core.Attribute;
 
 namespace Daemon.Impl.Payloads;
 
-public class MessagePayload : Payload
+public class FileSystemEvent : Payload
 {
-    public static MessagePayload Create(WatcherChangeTypes changeType, string fullPath, string? name, string? oldName) => new MessagePayload
+    public static FileSystemEvent Create(WatcherChangeTypes changeType, string fullPath, string? name, string? oldName)
     {
-        ChangeType = changeType,
-        FullPath = fullPath,
-        Name = name,
-        OldName = oldName,
-    };
-
+        return new FileSystemEvent
+        {
+            ChangeType = changeType,
+            FullPath = fullPath,
+            Name = name,
+            OldName = oldName,
+        };
+    }
+    
     [TypeIndicator] public string Method => "SubscribeChanges-String";
     [TypeIndicator] public override PayloadType Type => PayloadType.Message;
     public WatcherChangeTypes ChangeType { get; init; }

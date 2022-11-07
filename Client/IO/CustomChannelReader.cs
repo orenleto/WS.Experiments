@@ -1,17 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 using Client.Impl;
+using Client.Impl.Payloads;
 
 namespace Client.IO;
 
-public class CustomChannelReader<TRead> : ChannelReader<TRead>
+public class CustomChannelReader<TRead> : ChannelReader<TRead> where TRead : Payload
 {
-    private readonly MyProxyClass _myProxy;
+    private readonly ProxyInterceptor _proxy;
     private readonly ChannelReader<TRead> _reader;
 
-    public CustomChannelReader(MyProxyClass myProxy, ChannelReader<TRead> reader)
+    public CustomChannelReader(ProxyInterceptor proxy, ChannelReader<TRead> reader)
     {
-        _myProxy = myProxy;
+        _proxy = proxy;
         _reader = reader;
     }
 
@@ -27,6 +28,6 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead>
 
     public async void Cancel()
     {
-        await _myProxy.Cancel();
+        await _proxy.Cancel();
     }
 }

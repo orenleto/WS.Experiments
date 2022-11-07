@@ -90,8 +90,8 @@ public class ClientSession : WsSession
         {
             var payload = eventArgs switch
             {
-                RenamedEventArgs rename => MessagePayload.Create(rename.ChangeType, rename.FullPath, rename.Name, rename.OldName),
-                FileSystemEventArgs fileEvent => MessagePayload.Create(fileEvent.ChangeType, fileEvent.FullPath, fileEvent.Name, null),
+                RenamedEventArgs rename => FileSystemEvent.Create(rename.ChangeType, rename.FullPath, rename.Name, rename.OldName),
+                FileSystemEventArgs fileEvent => FileSystemEvent.Create(fileEvent.ChangeType, fileEvent.FullPath, fileEvent.Name, null),
                 _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
             };
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
