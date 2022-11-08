@@ -1,4 +1,4 @@
-namespace Daemon.Contracts;
+namespace Daemon.Contracts.Interfaces;
 
 public interface ICancelable
 {

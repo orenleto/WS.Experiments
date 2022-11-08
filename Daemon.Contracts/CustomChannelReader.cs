@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
+using Daemon.Contracts.Interfaces;
 using Daemon.Contracts.Payloads;
 
 namespace Daemon.Contracts;
@@ -9,7 +10,7 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead>, ICancelable wher
     private readonly ICancelable _proxy;
     private readonly ChannelReader<TRead> _reader;
 
-    public CustomChannelReader(ICancelable proxy, ChannelReader<TRead> reader)
+    public CustomChannelReader(ICancelable proxy, Channel<TRead> reader)
     {
         _proxy = proxy;
         _reader = reader;

@@ -1,8 +1,7 @@
 using Castle.DynamicProxy;
 using Client.Impl;
-using Client.Interfaces;
 using Daemon.Contracts;
-using Daemon.Contracts.Payloads;
+using Daemon.Contracts.Interfaces;
 using Daemon.Contracts.Payloads.Events;
 
 namespace Client;
@@ -58,8 +57,9 @@ public class Program
     
     private static T Proxy<T>(Configurations.Client client)
     {
-        var webSocketTransport = new WebSocketTransport(client.Uri, _cts.Token);
-        var proxyInterceptor = new ProxyInterceptor(webSocketTransport);
+        var webSocketTransport = new WebSocketTransport(client.Uri);
+        var processingHandler = new ProcessingLoopHandler();
+        var proxyInterceptor = new ProxyInterceptor<FileSystemEvent>(webSocketTransport, processingHandler);
         return (T)_generator.CreateInterfaceProxyWithoutTarget(typeof(T), proxyInterceptor);
     }
     

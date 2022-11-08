@@ -1,6 +1,6 @@
 using Daemon.Contracts.Payloads.Events;
 
-namespace Daemon.Contracts;
+namespace Daemon.Contracts.Interfaces;
 
 public interface IFileSystemDaemon
 {
