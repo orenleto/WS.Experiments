@@ -17,11 +17,14 @@ public class ProcessingLoopHandler : IProcessingHandler<FileSystemEvent>
         }
         else if (message is ErrorPayload error)
         {
-            Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", error.Request, string.Join(", ", error.Errors));
+            var errorMessage = string.Join(", ", error.Errors);
+            Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", error.Request, errorMessage);
+            throw new InvalidOperationException(errorMessage);
         }
         else if (message is ExceptionPayload serverException)
         {
             Console.WriteLine("Исключение при выполнении запроса {0}: {1}", serverException.Request, serverException.Message);
+            throw new Exception(serverException.Message);
         }
         else if (message is FileSystemEvent fileSystemEvent)
         {
