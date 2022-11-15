@@ -1,8 +1,7 @@
-using System.Text;
 using System.Security.Cryptography;
-using Buffer = NetCoreServer.Buffer;
+using System.Text;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// WebSocket utility class

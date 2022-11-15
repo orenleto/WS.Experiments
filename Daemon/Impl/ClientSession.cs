@@ -5,14 +5,16 @@ using Daemon.Contracts.Payloads;
 using Daemon.Contracts.Payloads.Events;
 using Daemon.Contracts.Payloads.Requests;
 using Daemon.Handlers;
+using Daemon.Impl.Requests;
 using Daemon.Interfaces;
-using Daemon.NetCoreServer;
 using MediatR;
+using NetCoreServer;
 
 namespace Daemon.Impl;
 
-public class ClientSession : WsSession
+public class ClientSession : WsSession, IClientSession
 {
+    private readonly WsSession _wsSession;
     private readonly IMediator _mediator;
     private readonly ISubscriptionManager _subscriptionManager;
     private readonly ILogger<ClientSession> _logger;
@@ -37,7 +39,7 @@ public class ClientSession : WsSession
 
     public override async void OnWsReceived(byte[] buffer, long offset, long size)
     {
-        _logger.LogInformation("Incoming from Id {id} {byteCount}bytes", Id, size);
+        _logger.LogInformation("Incoming from Id {id} {byteCount} bytes", Id, size);
         try
         {
             var request = JsonSerializer.Deserialize<Request>(new ArraySegment<byte>(buffer, (int)offset, (int)size));

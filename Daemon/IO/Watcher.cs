@@ -1,15 +1,15 @@
 using Daemon.Collections;
 using Daemon.Configurations;
 using Daemon.Extensions;
+using Daemon.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Daemon.IO;
 
-
 /// <summary>
 /// Background watcher for <see cref="FileSystemEventArgs"/>
 /// </summary>
-public sealed class Watcher : IDisposable
+public sealed class Watcher : IWatcher
 {
     private readonly object _syncRoot = new();
     private readonly ManualResetEventSlim _initializedEvent = new();
@@ -17,7 +17,7 @@ public sealed class Watcher : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     
     private readonly FileSystemEventConfiguration _configuration;
-    private readonly ILogger<Watcher> _logger;
+    private readonly ILogger<IWatcher> _logger;
     private readonly Thread _internalThread;
 
     private int _subscribers;
@@ -34,14 +34,14 @@ public sealed class Watcher : IDisposable
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
-    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null)
+    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<IWatcher>? logger = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
 
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _configuration = configuration;
-        _logger = logger ?? NullLogger<Watcher>.Instance;
+        _logger = logger ?? NullLogger<IWatcher>.Instance;
         _subscribers = 0;
 
         _logger.Initializing<Watcher>();

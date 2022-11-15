@@ -8,6 +8,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCoreServer", "NetCoreSer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daemon.Contracts", "Daemon.Contracts\Daemon.Contracts.csproj", "{68906E93-0AD4-46C0-BD32-AD6F1EFC7568}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daemon.UnitTests", "tests\Daemon.UnitTests\Daemon.UnitTests.csproj", "{0505564D-3940-49D1-897C-C234E4792E31}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{374E2DA5-6C67-4936-A144-8C8A6BD10574}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +34,12 @@ Global
 		{68906E93-0AD4-46C0-BD32-AD6F1EFC7568}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68906E93-0AD4-46C0-BD32-AD6F1EFC7568}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68906E93-0AD4-46C0-BD32-AD6F1EFC7568}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0505564D-3940-49D1-897C-C234E4792E31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0505564D-3940-49D1-897C-C234E4792E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0505564D-3940-49D1-897C-C234E4792E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0505564D-3940-49D1-897C-C234E4792E31}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0505564D-3940-49D1-897C-C234E4792E31} = {374E2DA5-6C67-4936-A144-8C8A6BD10574}
 	EndGlobalSection
 EndGlobal

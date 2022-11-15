@@ -1,8 +1,8 @@
 using System.Net.Sockets;
 using Daemon.Configurations;
 using Daemon.Interfaces;
-using Daemon.NetCoreServer;
 using MediatR;
+using NetCoreServer;
 
 namespace Daemon.Impl;
 

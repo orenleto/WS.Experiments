@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// WebSocket server

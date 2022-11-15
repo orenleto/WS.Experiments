@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 public interface IWebSocket
 {

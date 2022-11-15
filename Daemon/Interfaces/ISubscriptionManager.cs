@@ -1,5 +1,3 @@
-using Daemon.Impl;
-
 namespace Daemon.Interfaces;
 
 public interface ISubscriptionManager
@@ -9,10 +7,10 @@ public interface ISubscriptionManager
     /// </summary>
     /// <param name="clientSession">Subscribing client</param>
     /// <param name="directory">Watching directory path</param>
-    void Subscribe(ClientSession clientSession, string directory);
+    void Subscribe(IClientSession clientSession, string directory);
     /// <summary>
     /// Unsubscribe client from all watching directories
     /// </summary>
     /// <param name="clientSession">Unsubscribing client</param>
-    void UnsubscribeAll(ClientSession clientSession);
+    void UnsubscribeAll(IClientSession clientSession);
 }

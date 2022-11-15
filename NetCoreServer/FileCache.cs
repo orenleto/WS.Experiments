@@ -1,7 +1,7 @@
 using System.Text;
 using System.Web;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// File cache is used to cache files in memory with optional timeouts.

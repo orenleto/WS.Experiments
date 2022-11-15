@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using Buffer = NetCoreServer.Buffer;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// HTTP response is used to create or process parameters of HTTP protocol response(status, headers, etc).

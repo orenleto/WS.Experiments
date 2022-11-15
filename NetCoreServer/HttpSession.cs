@@ -1,4 +1,4 @@
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// HTTP session is used to receive/send HTTP requests/responses from the connected HTTP client.

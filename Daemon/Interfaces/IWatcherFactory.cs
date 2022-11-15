@@ -1,8 +1,6 @@
-using Daemon.IO;
-
 namespace Daemon.Interfaces;
 
 public interface IWatcherFactory
 {
-    Watcher Create(string directory, CancellationToken watcherCancellationToken);
+    IWatcher Create(string directory, CancellationToken watcherCancellationToken);
 }

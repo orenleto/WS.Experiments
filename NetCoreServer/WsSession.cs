@@ -1,8 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
-using Buffer = NetCoreServer.Buffer;
 
-namespace Daemon.NetCoreServer;
+namespace NetCoreServer;
 
 /// <summary>
 /// WebSocket session

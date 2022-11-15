@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Daemon.Interfaces;
-using Daemon.IO;
 
 namespace Daemon.Impl;
 
@@ -12,8 +11,8 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
 
     private readonly CancellationTokenSource _watcherTokenSource = new CancellationTokenSource();
 
-    private readonly ConcurrentDictionary<string, Watcher> _watchers = new ConcurrentDictionary<string, Watcher>();
-    private readonly ConcurrentDictionary<Guid, LinkedList<Watcher>> _subscriptions = new ConcurrentDictionary<Guid, LinkedList<Watcher>>();
+    private readonly ConcurrentDictionary<string, IWatcher> _watchers = new ConcurrentDictionary<string, IWatcher>();
+    private readonly ConcurrentDictionary<Guid, LinkedList<IWatcher>> _subscriptions = new ConcurrentDictionary<Guid, LinkedList<IWatcher>>();
 
     public SubscriptionManager(IWatcherFactory watcherFactory, ILogger<SubscriptionManager> logger)
     {
@@ -21,28 +20,30 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
         _watcherFactory = watcherFactory;
     }
 
-    public void Subscribe(ClientSession clientSession, string directory)
+    public void Subscribe(IClientSession clientSession, string directory)
     {
         lock (_syncRoot)
         {
             if (_watchers.TryGetValue(directory, out var watcher))
             {
-                _logger.LogInformation("Client {clientId} subscribe on directory {directory} from lock section", clientSession.Id, directory);
+                _logger.LogInformation("Client {clientId} subscribe to existent watcher by {directory}", clientSession.Id, directory);
+                watcher.AddCallback(clientSession.Send);
+            }
+            else
+            {
+                _logger.LogInformation("Client {clientId} subscribe to new watcher by {directory}", clientSession.Id, directory);
+                var newWatcher = _watcherFactory.Create(directory, _watcherTokenSource.Token);
+                watcher = _watchers.GetOrAdd(directory, newWatcher);
                 watcher.AddCallback(clientSession.Send);
             }
 
-            _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
-            var newWatcher = _watcherFactory.Create(directory, _watcherTokenSource.Token);
-            watcher = _watchers.GetOrAdd(directory, newWatcher);
-            watcher.AddCallback(clientSession.Send);
-
-            var subscriptions = _subscriptions.GetOrAdd(clientSession.Id, _ => new LinkedList<Watcher>());
-            _logger.LogInformation("Client {id} subscribed on {directory}", clientSession.Id, watcher.Directory);
+            _logger.LogInformation("Client {clientId} subscribed on {directory}", clientSession.Id, watcher.Directory);
+            var subscriptions = _subscriptions.GetOrAdd(clientSession.Id, _ => new LinkedList<IWatcher>());
             subscriptions.AddLast(watcher);
         }
     }
 
-    public void UnsubscribeAll(ClientSession clientSession)
+    public void UnsubscribeAll(IClientSession clientSession)
     {
         lock (_syncRoot)
         {
