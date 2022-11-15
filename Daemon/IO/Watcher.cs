@@ -21,6 +21,7 @@ public sealed class Watcher : IWatcher
     private readonly Thread _internalThread;
 
     private int _subscribers;
+    private bool _isStopped;
     private Action<FileSystemEventArgs>? _callback;
     private FileSystemEventCollection _collection;
 
@@ -43,11 +44,12 @@ public sealed class Watcher : IWatcher
         _configuration = configuration;
         _logger = logger ?? NullLogger<IWatcher>.Instance;
         _subscribers = 0;
+        _isStopped = false;
 
         _logger.Initializing<Watcher>();
         lock (_syncRoot)
         {
-            _internalThread = new Thread(StartCollectionWatcher);
+            _internalThread = new Thread(CollectionWatcherProcessLoop);
         }
     }
 
@@ -60,11 +62,11 @@ public sealed class Watcher : IWatcher
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
-        if (_subscribers < 0)
-            throw new InvalidOperationException();
 
         lock (_syncRoot)
         {
+            if (_isStopped)
+                throw new InvalidOperationException();
             _callback += callback;
             _logger.LogInformation("Watcher {directory} has new subscriber", _configuration.DirectoryToMonitor);
         }
@@ -86,12 +88,11 @@ public sealed class Watcher : IWatcher
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
-
-        var currentSubscribers = Interlocked.Decrement(ref _subscribers);
-        if (currentSubscribers < 0)
+        if (_isStopped)
             throw new InvalidOperationException();
-        
-        if (currentSubscribers == 0)
+
+
+        if (Interlocked.Decrement(ref _subscribers) == 0)
         {
             _cancellationTokenSource.Cancel();
             _stoppedEvent.Wait();
@@ -101,6 +102,7 @@ public sealed class Watcher : IWatcher
         lock (_syncRoot)
         {
             _callback -= callback;
+            _isStopped = _callback == null;
             _logger.LogInformation("Watcher {directory} was unsubscribed from publish event", _configuration.DirectoryToMonitor);
         }
     }
@@ -120,7 +122,7 @@ public sealed class Watcher : IWatcher
         _logger.LogInformation("Watcher {directory} was disposed", _configuration.DirectoryToMonitor);
     }
 
-    private void StartCollectionWatcher()
+    private void CollectionWatcherProcessLoop()
     {
         var cancellationToken = _cancellationTokenSource.Token;
         _collection = new FileSystemEventCollection(_configuration, cancellationToken);

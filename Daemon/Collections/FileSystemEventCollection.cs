@@ -1,6 +1,7 @@
 using System.Collections;
 using Daemon.Configurations;
 using Daemon.Extensions;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Daemon.Collections;
@@ -90,7 +91,7 @@ public sealed class FileSystemEventCollection : IEnumerable<FileSystemEventArgs>
         var tasks = new[]
         {
             Task.Run(() => InitializeWatcher(queue, watcher), _cancellationToken),
-            Task.Run(() => QueueInitialFiles(queue), _cancellationToken)
+            // Task.Run(() => QueueInitialFiles(queue), _cancellationToken)
         };
         Task.WaitAll(tasks, _cancellationToken);
         IsInitializedEvent.Set();
