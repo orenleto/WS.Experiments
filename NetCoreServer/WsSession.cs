@@ -27,7 +27,7 @@ public class WsSession : HttpSession, IWebSocket
         lock (WebSocket.WsSendLock)
         {
             WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, buffer);
-            return base.Send(WebSocket.WsSendBuffer.AsSpan());
+            return Send(WebSocket.WsSendBuffer.AsSpan());
         }
     }
 
@@ -40,7 +40,7 @@ public class WsSession : HttpSession, IWebSocket
         lock (WebSocket.WsSendLock)
         {
             WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, buffer);
-            return base.SendAsync(WebSocket.WsSendBuffer.AsSpan());
+            return SendAsync(WebSocket.WsSendBuffer.AsSpan());
         }
     }
 

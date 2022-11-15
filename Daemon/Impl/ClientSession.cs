@@ -50,8 +50,8 @@ public class ClientSession : WsSession, IClientSession
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Successfully complete {@request}", request);
-                    var payload = new SuccessPayload { Request = request };
-                    SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
+                    var payload = JsonSerializer.SerializeToUtf8Bytes(new SuccessPayload { Request = request });
+                    SendTextAsync(payload);
                 }
                 else
                 {
