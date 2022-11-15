@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Daemon.Configurations;
 using Daemon.Interfaces;
 using Daemon.IO;
 
@@ -7,7 +6,7 @@ namespace Daemon.Impl;
 
 public class SubscriptionManager : IDisposable, ISubscriptionManager
 {
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly IWatcherFactory _watcherFactory;
     private readonly ILogger<SubscriptionManager> _logger;
     private readonly object _syncRoot = new object();
 
@@ -16,58 +15,48 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
     private readonly ConcurrentDictionary<string, Watcher> _watchers = new ConcurrentDictionary<string, Watcher>();
     private readonly ConcurrentDictionary<Guid, LinkedList<Watcher>> _subscriptions = new ConcurrentDictionary<Guid, LinkedList<Watcher>>();
 
-    public SubscriptionManager(ILoggerFactory loggerFactory)
+    public SubscriptionManager(IWatcherFactory watcherFactory, ILogger<SubscriptionManager> logger)
     {
-        _loggerFactory = loggerFactory;
-        _logger = loggerFactory.CreateLogger<SubscriptionManager>();
+        _logger = logger;
+        _watcherFactory = watcherFactory;
     }
 
     public void Subscribe(ClientSession clientSession, string directory)
     {
-        if (_watchers.TryGetValue(directory, out var watcher))
+        lock (_syncRoot)
         {
-            _logger.LogInformation("Client {clientId} subscribe on directory {directory}", clientSession.Id, directory);
-            watcher.AddCallback(clientSession.Send);
-        }
-        else
-        {
-            lock (_syncRoot)
+            if (_watchers.TryGetValue(directory, out var watcher))
             {
-                if (_watchers.TryGetValue(directory, out watcher))
-                {
-                    _logger.LogInformation("Client {clientId} subscribe on directory {directory} from lock section", clientSession.Id, directory);
-                    watcher.AddCallback(clientSession.Send);
-                }
-
-                _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
-                var newWatcher = new Watcher(new FileSystemEventConfiguration(directory), _watcherTokenSource.Token,
-                    _loggerFactory.CreateLogger<Watcher>(), RemoveWatcher);
-                watcher = _watchers.GetOrAdd(directory, newWatcher);
+                _logger.LogInformation("Client {clientId} subscribe on directory {directory} from lock section", clientSession.Id, directory);
                 watcher.AddCallback(clientSession.Send);
-                watcher.Watch();
             }
-        }
 
-        var subscriptions = _subscriptions.GetOrAdd(clientSession.Id, _ => new LinkedList<Watcher>());
-        lock (subscriptions)
-        {
+            _logger.LogInformation("Client {clientId} subscribe on directory {directory} by new watcher", clientSession.Id, directory);
+            var newWatcher = _watcherFactory.Create(directory, _watcherTokenSource.Token);
+            watcher = _watchers.GetOrAdd(directory, newWatcher);
+            watcher.AddCallback(clientSession.Send);
+
+            var subscriptions = _subscriptions.GetOrAdd(clientSession.Id, _ => new LinkedList<Watcher>());
+            _logger.LogInformation("Client {id} subscribed on {directory}", clientSession.Id, watcher.Directory);
             subscriptions.AddLast(watcher);
         }
     }
 
     public void UnsubscribeAll(ClientSession clientSession)
     {
-        if (!_subscriptions.TryRemove(clientSession.Id, out var subscriptions))
+        lock (_syncRoot)
         {
-            return;
-        }
+            if (!_subscriptions.TryRemove(clientSession.Id, out var subscriptions))
+                return;
 
-        lock (subscriptions)
-        {
-            foreach (var watcher in subscriptions.Intersect(_watchers.Values))
+            foreach (var watcher in subscriptions)
             {
                 _logger.LogInformation("Client {id} unsubscribed from {directory}", clientSession.Id, watcher.Directory);
                 watcher.RemoveCallback(clientSession.Send);
+                if (watcher.Subscribers == 0 && _watchers.TryRemove(watcher.Directory, out _))
+                {
+                    watcher.Dispose();
+                }
             }
         }
     }
@@ -75,15 +64,9 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
     public void Dispose()
     {
         _watcherTokenSource.Cancel();
-    }
-
-    private void RemoveWatcher(string directory)
-    {
-        _logger.LogInformation("Remove watcher for {directory}", directory);
-        lock (_syncRoot)
+        foreach (var watcher in _watchers.Values)
         {
-            if (_watchers.TryRemove(directory, out var watcher))
-                watcher.Dispose();
+            watcher.Dispose();
         }
     }
 }

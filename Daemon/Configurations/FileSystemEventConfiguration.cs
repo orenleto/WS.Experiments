@@ -1,6 +1,6 @@
 namespace Daemon.Configurations;
 
-public class FileSystemEventConfiguration
+public sealed class FileSystemEventConfiguration
 {
     /// <summary>
     /// Initializes a new <see cref="FileSystemEventConfiguration"/>

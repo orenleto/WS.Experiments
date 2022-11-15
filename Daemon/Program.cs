@@ -1,7 +1,10 @@
 ﻿using Daemon.Configurations;
 using Daemon.Impl;
 using Daemon.Interfaces;
+using Daemon.IO;
 using MediatR;
+
+namespace Daemon;
 
 class Program
 {
@@ -19,6 +22,7 @@ class Program
                 services.AddMediatR(typeof(Program));
                 services.Configure<ServerConfiguration>(hostContext.Configuration.GetSection("Server"));
                 services.AddSingleton<ISubscriptionManager, SubscriptionManager>();
+                services.AddSingleton<IWatcherFactory, WatcherFactory>();
                 services.AddHostedService<WebSocketServerService>();
             })
             .Build()

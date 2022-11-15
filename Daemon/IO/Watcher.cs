@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Daemon.IO;
 
+
 /// <summary>
 /// Background watcher for <see cref="FileSystemEventArgs"/>
 /// </summary>
@@ -12,18 +13,19 @@ public sealed class Watcher : IDisposable
 {
     private readonly object _syncRoot = new();
     private readonly ManualResetEventSlim _initializedEvent = new();
+    private readonly ManualResetEventSlim _stoppedEvent = new();
     private readonly CancellationTokenSource _cancellationTokenSource;
     
     private readonly FileSystemEventConfiguration _configuration;
     private readonly ILogger<Watcher> _logger;
     private readonly Thread _internalThread;
-    
+
+    private int _subscribers;
     private Action<FileSystemEventArgs>? _callback;
-    private readonly Action<string>? _onTerminate;
-    
     private FileSystemEventCollection _collection;
 
     public string Directory => _configuration.DirectoryToMonitor;
+    public int Subscribers => _subscribers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Watcher"/> class.
@@ -32,15 +34,15 @@ public sealed class Watcher : IDisposable
     /// <param name="configuration">        Initial configuration object </param>
     /// <param name="cancellationToken">    Cancellation token to signal to stop watching </param>
     /// <param name="logger">               Logger to use </param>
-    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null, Action<string>? onTerminate = null)
+    public Watcher(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<Watcher>? logger = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
 
-        _onTerminate = onTerminate;
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _configuration = configuration;
         _logger = logger ?? NullLogger<Watcher>.Instance;
+        _subscribers = 0;
 
         _logger.Initializing<Watcher>();
         lock (_syncRoot)
@@ -50,23 +52,34 @@ public sealed class Watcher : IDisposable
     }
 
     /// <summary>
-    /// Add callback to current callback chain
+    /// Add callback to current callback chain.
+    /// If callback chain was empty method starts watching process.
     /// </summary>
     /// <param name="callback"> Activate to add to chain </param>
     public void AddCallback(Action<FileSystemEventArgs> callback)
     {
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
+        if (_subscribers < 0)
+            throw new InvalidOperationException();
 
         lock (_syncRoot)
         {
             _callback += callback;
             _logger.LogInformation("Watcher {directory} has new subscriber", _configuration.DirectoryToMonitor);
         }
+                    
+        if (Interlocked.Increment(ref _subscribers) == 1)
+        {
+            _internalThread.Start();
+            _initializedEvent.Wait(_cancellationTokenSource.Token);
+            _logger.LogInformation("Watcher {directory} started", _configuration.DirectoryToMonitor);
+        }
     }
 
     /// <summary>
     /// Remove callback from current callback chain
+    /// If callback chain is empty – stopped watch process
     /// </summary>
     /// <param name="callback"> Activate to remove from chain </param>
     public void RemoveCallback(Action<FileSystemEventArgs> callback)
@@ -74,32 +87,24 @@ public sealed class Watcher : IDisposable
         if (callback is null)
             throw new ArgumentNullException(nameof(callback));
 
+        var currentSubscribers = Interlocked.Decrement(ref _subscribers);
+        if (currentSubscribers < 0)
+            throw new InvalidOperationException();
+        
+        if (currentSubscribers == 0)
+        {
+            _cancellationTokenSource.Cancel();
+            _stoppedEvent.Wait();
+            _logger.LogInformation("Watcher {directory} stopped", _configuration.DirectoryToMonitor);
+        }
+
         lock (_syncRoot)
         {
             _callback -= callback;
-            if (_callback is null)
-            {
-                _logger.LogInformation("Watcher {directory} stopping", _configuration.DirectoryToMonitor);
-                _cancellationTokenSource.Cancel();
-            }
+            _logger.LogInformation("Watcher {directory} was unsubscribed from publish event", _configuration.DirectoryToMonitor);
         }
     }
 
-    /// <summary>
-    /// Begin monitoring directory for file changes
-    /// </summary>
-    /// <param name="callback"> Activate to execute when file system event occurs </param>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if no callbacks available to execute
-    /// </exception>
-    public void Watch()
-    {
-        if (_callback is null)
-            throw new InvalidOperationException("Unable to watch without callback to execute");
-
-        _internalThread.Start();
-        _initializedEvent.Wait(_cancellationTokenSource.Token);
-    }
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting
@@ -107,31 +112,31 @@ public sealed class Watcher : IDisposable
     /// </summary>
     public void Dispose()
     {
+        _subscribers = -1;
         _cancellationTokenSource.Dispose();
         _initializedEvent.Dispose();
+        _stoppedEvent.Dispose();
         _collection.Dispose();
+        _logger.LogInformation("Watcher {directory} was disposed", _configuration.DirectoryToMonitor);
     }
 
     private void StartCollectionWatcher()
     {
         var cancellationToken = _cancellationTokenSource.Token;
-        _logger.LogInformation("Watcher {directory} started", _configuration.DirectoryToMonitor);
         _collection = new FileSystemEventCollection(_configuration, cancellationToken);
 
-        Task.Run(() =>
+        _ = Task.Run(() =>
         {
             _collection.IsInitializedEvent.Wait(cancellationToken);
             _initializedEvent.Set();
         });
 
         using var collectionEnumerator = _collection.GetEnumerator();
-        while (collectionEnumerator.MoveNext() && _callback is not null)
+        while (collectionEnumerator.MoveNext())
         {
             _logger.LogInformation("Watcher {directory} produce event {event}", _configuration.DirectoryToMonitor, collectionEnumerator.Current.Name);
             _callback!(collectionEnumerator.Current);
         }
-
-        _onTerminate?.Invoke(_configuration.DirectoryToMonitor);
-        _logger.LogInformation("Watcher {directory} stopped", _configuration.DirectoryToMonitor);
+        _stoppedEvent.Set();
     }
 }

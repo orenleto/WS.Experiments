@@ -1,4 +1,5 @@
 using Daemon.Configurations;
+using Daemon.Contracts;
 using Daemon.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Options;

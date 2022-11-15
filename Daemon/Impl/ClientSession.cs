@@ -4,10 +4,9 @@ using System.Text.Json;
 using Daemon.Contracts.Payloads;
 using Daemon.Contracts.Payloads.Events;
 using Daemon.Contracts.Payloads.Requests;
-using Daemon.Impl.Requests;
+using Daemon.Handlers;
 using Daemon.Interfaces;
 using Daemon.NetCoreServer;
-using FluentResults;
 using MediatR;
 
 namespace Daemon.Impl;
@@ -42,15 +41,15 @@ public class ClientSession : WsSession
         try
         {
             var request = JsonSerializer.Deserialize<Request>(new ArraySegment<byte>(buffer, (int)offset, (int)size));
-            if (request is not null && request is IRequest<Result<SubscribeResult>> subscribeCommand)
+            if (request is SubscribeChangesRequest subscribeCommand)
             {
-                var result = await _mediator.Send(subscribeCommand);
+                var command = new SubscribeChanges.Command(subscribeCommand.Directory, this);
+                var result = await _mediator.Send(command);
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Successfully complete {@request}", request);
-                    var subscribeResult = result.Value;
-                    SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(subscribeResult.Payload));
-                    subscribeResult.Activate(this);
+                    var payload = new SuccessPayload { Request = request };
+                    SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
                 }
                 else
                 {
@@ -65,7 +64,7 @@ public class ClientSession : WsSession
             }
             else
             {
-                _logger.LogError("Unimplemented method handler: {method}", request.Method);
+                _logger.LogError("Unimplemented method handler: {method}", request?.Method);
                 var payload = new ExceptionPayload
                 {
                     Request = request,
