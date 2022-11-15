@@ -1,12 +1,11 @@
 using Daemon.Configurations;
-using Daemon.Contracts;
 using Daemon.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace Daemon.Impl;
 
-public class WebSocketServerService : IHostedService, IDisposable
+public class WebSocketServerService : IHostedService
 {
     private readonly MyServer _server;
     private readonly ILogger<WebSocketServerService> _logger;
@@ -24,8 +23,8 @@ public class WebSocketServerService : IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Server started at {time}", DateTime.UtcNow.ToString("U"));
         _server.Start();
+        _logger.LogInformation("Server started at {time}", DateTime.UtcNow.ToString("U"));
         return Task.CompletedTask;
     }
 
@@ -34,11 +33,5 @@ public class WebSocketServerService : IHostedService, IDisposable
         _logger.LogInformation("Server stopped at {time}", DateTime.UtcNow.ToString("U"));
         _server.Stop();
         return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        _server.Stop();
-        _server.Dispose();
     }
 }
