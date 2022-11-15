@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Daemon;
 
-class Program
+public class Program
 {
     static async Task Main(string[] args)
     {
@@ -18,6 +18,7 @@ class Program
             })
             .ConfigureServices((hostContext, services) =>
             {
+                services.AddLogging();
                 services.AddOptions();
                 services.AddMediatR(typeof(Program));
                 services.Configure<ServerConfiguration>(hostContext.Configuration.GetSection("Server"));

@@ -5,7 +5,6 @@ using Daemon.Contracts.Payloads;
 using Daemon.Contracts.Payloads.Events;
 using Daemon.Contracts.Payloads.Requests;
 using Daemon.Handlers;
-using Daemon.Impl.Requests;
 using Daemon.Interfaces;
 using MediatR;
 using NetCoreServer;

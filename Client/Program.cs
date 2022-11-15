@@ -55,7 +55,7 @@ public class Program
         }
     }
     
-    private static T Proxy<T>(Configurations.Client client)
+    public static T Proxy<T>(Configurations.Client client)
     {
         var webSocketTransport = new WebSocketTransport(client.Uri);
         var processingHandler = new ProcessingLoopHandler();

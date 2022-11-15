@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daemon.UnitTests", "tests\D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{374E2DA5-6C67-4936-A144-8C8A6BD10574}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daemon.IntegrationTests", "tests\Daemon.IntegrationTests\Daemon.IntegrationTests.csproj", "{79DAA081-A5FD-4927-BB21-C66C17CC4CAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,8 +40,13 @@ Global
 		{0505564D-3940-49D1-897C-C234E4792E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0505564D-3940-49D1-897C-C234E4792E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0505564D-3940-49D1-897C-C234E4792E31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79DAA081-A5FD-4927-BB21-C66C17CC4CAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79DAA081-A5FD-4927-BB21-C66C17CC4CAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79DAA081-A5FD-4927-BB21-C66C17CC4CAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79DAA081-A5FD-4927-BB21-C66C17CC4CAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{0505564D-3940-49D1-897C-C234E4792E31} = {374E2DA5-6C67-4936-A144-8C8A6BD10574}
+		{79DAA081-A5FD-4927-BB21-C66C17CC4CAF} = {374E2DA5-6C67-4936-A144-8C8A6BD10574}
 	EndGlobalSection
 EndGlobal

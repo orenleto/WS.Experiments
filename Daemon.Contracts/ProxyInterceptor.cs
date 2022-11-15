@@ -11,7 +11,7 @@ namespace Daemon.Contracts;
 public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where T : Payload
 {
     private static readonly ConcurrentDictionary<MethodInfo, Type> _dataTransferTypes = new ConcurrentDictionary<MethodInfo, Type>();
-    
+
     private readonly CancellationTokenSource _proxyTokenSource = new CancellationTokenSource();
     private readonly ITransport _transport;
     private readonly IProcessingHandler<T> _processingHandler;
@@ -44,7 +44,7 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
     public void Intercept(IInvocation invocation)
     {
         _initialized.Wait(_proxyTokenSource.Token);
-        
+
         var transferType = _dataTransferTypes.GetOrAdd(invocation.Method, Generator.GenerateDTO);
         var command = Activator.CreateInstance(transferType, invocation.Arguments);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(command);
@@ -56,7 +56,7 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
             return new CustomChannelReader<T>(this, _channel);
         }
     }
-    
+
     private async Task ProcessingLoopAsync(CancellationToken cancellationToken)
     {
         try
@@ -68,7 +68,8 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
                     break;
                 
                 var @event = await _processingHandler.Handle(body, cancellationToken);
-                await _channel.Writer.WriteAsync(@event, cancellationToken);
+                if (@event is not null)
+                    await _channel.Writer.WriteAsync(@event, cancellationToken);
             }
         }
         catch (OperationCanceledException)

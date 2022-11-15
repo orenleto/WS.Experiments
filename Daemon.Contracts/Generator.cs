@@ -8,19 +8,46 @@ namespace Daemon.Contracts;
 
 public static class Generator
 {
+    private static readonly IReadOnlyDictionary<string, Type> _existentDataTransferTypes;
+    
+    static Generator()
+    {
+        var property = typeof(Request)
+            .GetProperty(nameof(Request.Method))
+            .GetMethod;
+        
+        var requestInheritors = Assembly.GetCallingAssembly()
+            .GetTypes()
+            .Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(Request)))
+            .ToArray();
+
+        var dataTransferTypes = new Dictionary<string, Type>();
+        foreach (var inheritor in requestInheritors)
+        {
+            var instance = Activator.CreateInstance(inheritor);
+            var alias = (string)property.Invoke(instance, Array.Empty<object>());
+            dataTransferTypes.Add(alias, inheritor);
+        }
+
+        _existentDataTransferTypes = dataTransferTypes;
+    }
+    
     public static Type GenerateDTO(MethodInfo method)
     {
         var parameters = method.GetParameters();
 
         var methodName = new StringBuilder(method.Name);
         methodName.Append("Command_");
-        var alias = new StringBuilder(method.Name);
-        alias.Append('-');
+        var sbAlias = new StringBuilder(method.Name);
+        sbAlias.Append('-');
         foreach (var parameter in parameters)
         {
             methodName.Append(parameter.ParameterType.Name);
-            alias.Append(parameter.ParameterType.Name);
+            sbAlias.Append(parameter.ParameterType.Name);
         }
+        var alias = sbAlias.ToString();
+        if (_existentDataTransferTypes.TryGetValue(alias, out var type))
+            return type;
 
         //create the builder
         AssemblyName assembly = typeof(Request).Assembly.GetName();
@@ -125,7 +152,7 @@ public static class Generator
         );
 
         ILGenerator methodGetIL = mbGetMethod.GetILGenerator();
-        methodGetIL.Emit(OpCodes.Ldstr, alias.ToString());
+        methodGetIL.Emit(OpCodes.Ldstr, alias);
         methodGetIL.Emit(OpCodes.Ret);
         
         PropertyBuilder pbMethod = typeBuilder.DefineProperty(
