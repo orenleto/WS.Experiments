@@ -3,6 +3,7 @@ using System.Text.Json;
 using Daemon.Contracts.Interfaces;
 using Daemon.Contracts.Payloads;
 using Daemon.Contracts.Payloads.Events;
+using Daemon.Contracts.Payloads.Requests;
 
 namespace Client.Impl;
 
@@ -13,7 +14,13 @@ public class ProcessingLoopHandler : IProcessingHandler<FileSystemEvent>
         var message = JsonSerializer.Deserialize<Payload>(rawData);
         if (message is SuccessPayload success)
         {
-            Console.WriteLine("Успешное выполнение запроса {0}", success.Request.Method);
+            var request = success.Request as SubscribeChangesRequest;
+            Console.WriteLine("Успешное выполнение запроса {0}", request.Method);
+            return new FileSystemEvent
+            {
+                ChangeType = WatcherChangeTypes.All,
+                FullPath = request.Directory
+            };
         }
         else if (message is ErrorPayload error)
         {

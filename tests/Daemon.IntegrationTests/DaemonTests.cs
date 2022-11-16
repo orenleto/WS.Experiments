@@ -19,9 +19,13 @@ namespace Daemon.IntegrationTests;
 
 public class DaemonTests
 {
+    private static readonly IPAddress _ipAddress = IPAddress.Loopback;
+    private static readonly int _port = 28933;
+
     [Fact]
     public async Task SubscribeChanges_MustReceiveAllDirectoryChanges()
     {
+        var listenEventSlim = new ManualResetEventSlim();
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         var events = new List<FileSystemEvent>();
@@ -40,8 +44,8 @@ public class DaemonTests
         services.AddHostedService<WebSocketServerService>();
         services.Configure<ServerConfiguration>(c =>
         {
-            c.IpAddress = IPAddress.Loopback.ToString();
-            c.Port = 28933;
+            c.IpAddress = _ipAddress.ToString();
+            c.Port = _port;
         });
         var serviceProvider = services.BuildServiceProvider();
 
@@ -50,12 +54,12 @@ public class DaemonTests
 
         await service!.StartAsync(token);
 
-        var daemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client("ws://localhost:28933/"));
+        var daemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{_port}/"));
         var changesReader = await daemon.SubscribeChanges("./IntegrationTest");
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(1000);
+            listenEventSlim.Wait();
             using (var fs = File.CreateText("./IntegrationTest/test_file.txt"))
             {
                 await fs.WriteAsync("lorem ipsum dolor sit amet");
@@ -67,7 +71,7 @@ public class DaemonTests
                 await fs.WriteAsync("{\"message\": \"lorem ipsum dolor sit amet\"}");
                 await fs.FlushAsync();
             }
-            
+
             using (var fs = File.Create("./IntegrationTest/test_file.bin"))
             {
                 var raw = new byte[256];
@@ -75,19 +79,22 @@ public class DaemonTests
                 await fs.WriteAsync(raw, token);
                 await fs.FlushAsync(token);
             }
-            
         });
 
         while (await changesReader.WaitToReadAsync(token))
         {
             var fsEvent = await changesReader.ReadAsync(token);
+            if (fsEvent.ChangeType == WatcherChangeTypes.All)
+                listenEventSlim.Set();
+            
             events.Add(fsEvent);
-            if (events.Count >= 6)
+            if (events.Count >= 7)
                 changesReader.Cancel();
         }
 
         await service.StopAsync(token);
 
+        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.All && @event.FullPath == "./IntegrationTest");
         Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == "test_file.txt");
         Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Changed && @event.Name == "test_file.txt");
         Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == "test_file.json");
