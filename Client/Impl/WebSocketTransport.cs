@@ -11,9 +11,10 @@ public class WebSocketTransport : ITransport
         .Handle<WebSocketException>()
         .WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 4));
 
-    private readonly Uri _uri;
     private readonly ArraySegment<byte> _buffer;
-    
+
+    private readonly Uri _uri;
+
     private Func<ArraySegment<byte>, CancellationToken, Task>? _continuations;
     private ClientWebSocket? _webSocket;
 
@@ -42,26 +43,21 @@ public class WebSocketTransport : ITransport
             throw new InvalidOperationException("Unable to connect closed websocket");
         }
     }
-    
+
     public async Task SendAsync(ArraySegment<byte> data, CancellationToken cancellationToken)
     {
         if (_webSocket!.State != WebSocketState.Open)
             throw new InvalidOperationException("Unable to send message by invalid websocket state");
         await _webSocket.SendAsync(data, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, cancellationToken);
     }
-    
+
     public async Task<ArraySegment<byte>> ReceiveAsync(CancellationToken cancellationToken)
     {
         var receiveResult = await _webSocket!.ReceiveAsync(_buffer, cancellationToken);
-        if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close)
-        {
-            return _buffer[..receiveResult.Count];
-        }
+        if (_webSocket.State == WebSocketState.Open && receiveResult.MessageType != WebSocketMessageType.Close) return _buffer[..receiveResult.Count];
 
         if (_webSocket.State == WebSocketState.CloseReceived && receiveResult.MessageType == WebSocketMessageType.Close)
-        {
             await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledge Close frame", CancellationToken.None);
-        }
 
         return ArraySegment<byte>.Empty;
     }

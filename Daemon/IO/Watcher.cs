@@ -7,29 +7,26 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Daemon.IO;
 
 /// <summary>
-/// Background watcher for <see cref="FileSystemEventArgs"/>
+///     Background watcher for <see cref="FileSystemEventArgs" />
 /// </summary>
 public sealed class Watcher : IWatcher
 {
-    private readonly object _syncRoot = new();
-    private readonly ManualResetEventSlim _initializedEvent = new();
-    private readonly ManualResetEventSlim _stoppedEvent = new();
     private readonly CancellationTokenSource _cancellationTokenSource;
-    
-    private readonly FileSystemEventConfiguration _configuration;
-    private readonly ILogger<IWatcher> _logger;
-    private readonly Thread _internalThread;
 
-    private int _subscribers;
-    private bool _isStopped;
+    private readonly FileSystemEventConfiguration _configuration;
+    private readonly ManualResetEventSlim _initializedEvent = new();
+    private readonly Thread _internalThread;
+    private readonly ILogger<IWatcher> _logger;
+    private readonly ManualResetEventSlim _stoppedEvent = new();
+    private readonly object _syncRoot = new();
     private Action<FileSystemEventArgs>? _callback;
     private FileSystemEventCollection _collection;
+    private bool _isStopped;
 
-    public string Directory => _configuration.DirectoryToMonitor;
-    public int Subscribers => _subscribers;
+    private int _subscribers;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Watcher"/> class.
+    ///     Initializes a new instance of the <see cref="Watcher" /> class.
     /// </summary>
     /// <param name="callback">             Activate to execute on new file system event </param>
     /// <param name="configuration">        Initial configuration object </param>
@@ -53,9 +50,12 @@ public sealed class Watcher : IWatcher
         }
     }
 
+    public string Directory => _configuration.DirectoryToMonitor;
+    public int Subscribers => _subscribers;
+
     /// <summary>
-    /// Add callback to current callback chain.
-    /// If callback chain was empty method starts watching process.
+    ///     Add callback to current callback chain.
+    ///     If callback chain was empty method starts watching process.
     /// </summary>
     /// <param name="callback"> Activate to add to chain </param>
     public void AddCallback(Action<FileSystemEventArgs> callback)
@@ -70,7 +70,7 @@ public sealed class Watcher : IWatcher
             _callback += callback;
             _logger.LogInformation("Watcher {directory} has new subscriber", _configuration.DirectoryToMonitor);
         }
-                    
+
         if (Interlocked.Increment(ref _subscribers) == 1)
         {
             _internalThread.Start();
@@ -80,8 +80,8 @@ public sealed class Watcher : IWatcher
     }
 
     /// <summary>
-    /// Remove callback from current callback chain
-    /// If callback chain is empty – stopped watch process
+    ///     Remove callback from current callback chain
+    ///     If callback chain is empty – stopped watch process
     /// </summary>
     /// <param name="callback"> Activate to remove from chain </param>
     public void RemoveCallback(Action<FileSystemEventArgs> callback)
@@ -109,8 +109,8 @@ public sealed class Watcher : IWatcher
 
 
     /// <summary>
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting
-    /// unmanaged resources.
+    ///     Performs application-defined tasks associated with freeing, releasing, or resetting
+    ///     unmanaged resources.
     /// </summary>
     public void Dispose()
     {
@@ -139,6 +139,7 @@ public sealed class Watcher : IWatcher
             _logger.LogInformation("Watcher {directory} produce event {event}", _configuration.DirectoryToMonitor, collectionEnumerator.Current.Name);
             _callback!(collectionEnumerator.Current);
         }
+
         _stoppedEvent.Set();
     }
 }

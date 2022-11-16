@@ -3,13 +3,14 @@ using System.Net;
 namespace NetCoreServer;
 
 /// <summary>
-/// HTTP server is used to create HTTP Web server and communicate with clients using HTTP protocol. It allows to receive GET, POST, PUT, DELETE requests and send HTTP responses.
+///     HTTP server is used to create HTTP Web server and communicate with clients using HTTP protocol. It allows to receive GET, POST, PUT, DELETE
+///     requests and send HTTP responses.
 /// </summary>
 /// <remarks>Thread-safe.</remarks>
 public class HttpServer : TcpServer
 {
     /// <summary>
-    /// Initialize HTTP server with a given IP address and port number
+    ///     Initialize HTTP server with a given IP address and port number
     /// </summary>
     /// <param name="address">IP address</param>
     /// <param name="port">Port number</param>
@@ -19,7 +20,7 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Initialize HTTP server with a given IP address and port number
+    ///     Initialize HTTP server with a given IP address and port number
     /// </summary>
     /// <param name="address">IP address</param>
     /// <param name="port">Port number</param>
@@ -29,7 +30,7 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Initialize HTTP server with a given DNS endpoint
+    ///     Initialize HTTP server with a given DNS endpoint
     /// </summary>
     /// <param name="endpoint">DNS endpoint</param>
     public HttpServer(DnsEndPoint endpoint) : base(endpoint)
@@ -38,7 +39,7 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Initialize HTTP server with a given IP endpoint
+    ///     Initialize HTTP server with a given IP endpoint
     /// </summary>
     /// <param name="endpoint">IP endpoint</param>
     public HttpServer(IPEndPoint endpoint) : base(endpoint)
@@ -47,12 +48,12 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Get the static content cache
+    ///     Get the static content cache
     /// </summary>
     public FileCache Cache { get; }
 
     /// <summary>
-    /// Add static content cache
+    ///     Add static content cache
     /// </summary>
     /// <param name="path">Static content path</param>
     /// <param name="prefix">Cache prefix (default is "/")</param>
@@ -76,7 +77,7 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Remove static content cache
+    ///     Remove static content cache
     /// </summary>
     /// <param name="path">Static content path</param>
     public void RemoveStaticContent(string path)
@@ -85,7 +86,7 @@ public class HttpServer : TcpServer
     }
 
     /// <summary>
-    /// Clear static content cache
+    ///     Clear static content cache
     /// </summary>
     public void ClearStaticContent()
     {
@@ -107,10 +108,8 @@ public class HttpServer : TcpServer
         if (!_disposed)
         {
             if (disposingManagedResources)
-            {
                 // Dispose managed resources here...
                 Cache.Dispose();
-            }
 
             // Dispose unmanaged resources here...
 
@@ -132,41 +131,41 @@ public class HttpServer : TcpServer
 }
 
 /// <summary>
-    /// Disposable lock class performs exit action on dispose operation.
-    /// </summary>
-    public class DisposableLock : IDisposable
+///     Disposable lock class performs exit action on dispose operation.
+/// </summary>
+public class DisposableLock : IDisposable
+{
+    private readonly Action _exitLock;
+
+    public DisposableLock(Action exitLock)
     {
-        private readonly Action _exitLock;
-
-        public DisposableLock(Action exitLock)
-        {
-            _exitLock = exitLock;
-        }
-
-        public void Dispose()
-        {
-            _exitLock();
-        }
+        _exitLock = exitLock;
     }
 
-    /// <summary>
-    /// Read lock class enters read lock on construction and performs exit read lock on dispose.
-    /// </summary>
-    public class ReadLock : DisposableLock
+    public void Dispose()
     {
-        public ReadLock(ReaderWriterLockSlim locker) : base(locker.ExitReadLock)
-        {
-            locker.EnterReadLock();
-        }
+        _exitLock();
     }
+}
 
-    /// <summary>
-    /// Write lock class enters write lock on construction and performs exit write lock on dispose.
-    /// </summary>
-    public class WriteLock : DisposableLock
+/// <summary>
+///     Read lock class enters read lock on construction and performs exit read lock on dispose.
+/// </summary>
+public class ReadLock : DisposableLock
+{
+    public ReadLock(ReaderWriterLockSlim locker) : base(locker.ExitReadLock)
     {
-        public WriteLock(ReaderWriterLockSlim locker) : base(locker.ExitWriteLock)
-        {
-            locker.EnterWriteLock();
-        }
+        locker.EnterReadLock();
     }
+}
+
+/// <summary>
+///     Write lock class enters write lock on construction and performs exit write lock on dispose.
+/// </summary>
+public class WriteLock : DisposableLock
+{
+    public WriteLock(ReaderWriterLockSlim locker) : base(locker.ExitWriteLock)
+    {
+        locker.EnterWriteLock();
+    }
+}

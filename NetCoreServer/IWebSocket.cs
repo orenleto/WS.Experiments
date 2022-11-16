@@ -5,16 +5,19 @@ namespace NetCoreServer;
 public interface IWebSocket
 {
     /// <summary>
-    /// Handle WebSocket client connecting notification
+    ///     Handle WebSocket client connecting notification
     /// </summary>
-    /// <remarks>Notification is called when WebSocket client is connecting to the server. You can handle the connection and change WebSocket upgrade HTTP request by providing your own headers.</remarks>
+    /// <remarks>
+    ///     Notification is called when WebSocket client is connecting to the server. You can handle the connection and change WebSocket upgrade HTTP
+    ///     request by providing your own headers.
+    /// </remarks>
     /// <param name="request">WebSocket upgrade HTTP request</param>
     void OnWsConnecting(HttpRequest request)
     {
     }
 
     /// <summary>
-    /// Handle WebSocket client connected notification
+    ///     Handle WebSocket client connected notification
     /// </summary>
     /// <param name="response">WebSocket upgrade HTTP response</param>
     void OnWsConnected(HttpResponse response)
@@ -22,9 +25,12 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket server session validating notification
+    ///     Handle WebSocket server session validating notification
     /// </summary>
-    /// <remarks>Notification is called when WebSocket client is connecting to the server. You can handle the connection and validate WebSocket upgrade HTTP request.</remarks>
+    /// <remarks>
+    ///     Notification is called when WebSocket client is connecting to the server. You can handle the connection and validate WebSocket upgrade HTTP
+    ///     request.
+    /// </remarks>
     /// <param name="request">WebSocket upgrade HTTP request</param>
     /// <param name="response">WebSocket upgrade HTTP response</param>
     /// <returns>return 'true' if the WebSocket update request is valid, 'false' if the WebSocket update request is not valid</returns>
@@ -34,7 +40,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket server session connected notification
+    ///     Handle WebSocket server session connected notification
     /// </summary>
     /// <param name="request">WebSocket upgrade HTTP request</param>
     void OnWsConnected(HttpRequest request)
@@ -42,21 +48,21 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket client disconnecting notification
+    ///     Handle WebSocket client disconnecting notification
     /// </summary>
     void OnWsDisconnecting()
     {
     }
 
     /// <summary>
-    /// Handle WebSocket client disconnected notification
+    ///     Handle WebSocket client disconnected notification
     /// </summary>
     void OnWsDisconnected()
     {
     }
 
     /// <summary>
-    /// Handle WebSocket received notification
+    ///     Handle WebSocket received notification
     /// </summary>
     /// <param name="buffer">Received buffer</param>
     /// <param name="offset">Received buffer offset</param>
@@ -66,7 +72,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket client close notification
+    ///     Handle WebSocket client close notification
     /// </summary>
     /// <param name="buffer">Received buffer</param>
     /// <param name="offset">Received buffer offset</param>
@@ -77,7 +83,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket ping notification
+    ///     Handle WebSocket ping notification
     /// </summary>
     /// <param name="buffer">Received buffer</param>
     /// <param name="offset">Received buffer offset</param>
@@ -87,7 +93,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket pong notification
+    ///     Handle WebSocket pong notification
     /// </summary>
     /// <param name="buffer">Received buffer</param>
     /// <param name="offset">Received buffer offset</param>
@@ -97,7 +103,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle WebSocket error notification
+    ///     Handle WebSocket error notification
     /// </summary>
     /// <param name="error">Error message</param>
     void OnWsError(string error)
@@ -105,7 +111,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Handle socket error notification
+    ///     Handle socket error notification
     /// </summary>
     /// <param name="error">Socket error</param>
     void OnWsError(SocketError error)
@@ -113,7 +119,7 @@ public interface IWebSocket
     }
 
     /// <summary>
-    /// Send WebSocket server upgrade response
+    ///     Send WebSocket server upgrade response
     /// </summary>
     /// <param name="response">WebSocket upgrade HTTP response</param>
     void SendUpgrade(HttpResponse response)

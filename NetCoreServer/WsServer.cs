@@ -4,7 +4,7 @@ using System.Text;
 namespace NetCoreServer;
 
 /// <summary>
-/// WebSocket server
+///     WebSocket server
 /// </summary>
 /// <remarks> WebSocket server is used to communicate with clients using WebSocket protocol. Thread-safe.</remarks>
 public class WsServer : HttpServer, IWebSocket
@@ -12,7 +12,7 @@ public class WsServer : HttpServer, IWebSocket
     internal readonly WebSocket WebSocket;
 
     /// <summary>
-    /// Initialize WebSocket server with a given IP address and port number
+    ///     Initialize WebSocket server with a given IP address and port number
     /// </summary>
     /// <param name="address">IP address</param>
     /// <param name="port">Port number</param>
@@ -22,7 +22,7 @@ public class WsServer : HttpServer, IWebSocket
     }
 
     /// <summary>
-    /// Initialize WebSocket server with a given IP address and port number
+    ///     Initialize WebSocket server with a given IP address and port number
     /// </summary>
     /// <param name="address">IP address</param>
     /// <param name="port">Port number</param>
@@ -32,7 +32,7 @@ public class WsServer : HttpServer, IWebSocket
     }
 
     /// <summary>
-    /// Initialize WebSocket server with a given DNS endpoint
+    ///     Initialize WebSocket server with a given DNS endpoint
     /// </summary>
     /// <param name="endpoint">DNS endpoint</param>
     public WsServer(DnsEndPoint endpoint) : base(endpoint)
@@ -41,7 +41,7 @@ public class WsServer : HttpServer, IWebSocket
     }
 
     /// <summary>
-    /// Initialize WebSocket server with a given IP endpoint
+    ///     Initialize WebSocket server with a given IP endpoint
     /// </summary>
     /// <param name="endpoint">IP endpoint</param>
     public WsServer(IPEndPoint endpoint) : base(endpoint)
@@ -77,25 +77,41 @@ public class WsServer : HttpServer, IWebSocket
 
         // Multicast data to all WebSocket sessions
         foreach (var session in Sessions.Values)
-        {
             if (session is WsSession wsSession)
-            {
                 if (wsSession.WebSocket.WsHandshaked)
                     wsSession.SendAsync(buffer);
-            }
-        }
 
         return true;
     }
 
     #endregion
 
+    protected override TcpSession CreateSession()
+    {
+        return new WsSession(this);
+    }
+
     #region WebSocket multicast text methods
 
-    public bool MulticastText(string text) => MulticastText(Encoding.UTF8.GetBytes(text));
-    public bool MulticastText(ReadOnlySpan<char> text) => MulticastText(Encoding.UTF8.GetBytes(text.ToArray()));
-    public bool MulticastText(byte[] buffer) => MulticastText(buffer.AsSpan());
-    public bool MulticastText(byte[] buffer, long offset, long size) => MulticastText(buffer.AsSpan((int)offset, (int)size));
+    public bool MulticastText(string text)
+    {
+        return MulticastText(Encoding.UTF8.GetBytes(text));
+    }
+
+    public bool MulticastText(ReadOnlySpan<char> text)
+    {
+        return MulticastText(Encoding.UTF8.GetBytes(text.ToArray()));
+    }
+
+    public bool MulticastText(byte[] buffer)
+    {
+        return MulticastText(buffer.AsSpan());
+    }
+
+    public bool MulticastText(byte[] buffer, long offset, long size)
+    {
+        return MulticastText(buffer.AsSpan((int)offset, (int)size));
+    }
 
     public bool MulticastText(ReadOnlySpan<byte> buffer)
     {
@@ -110,10 +126,25 @@ public class WsServer : HttpServer, IWebSocket
 
     #region WebSocket multicast binary methods
 
-    public bool MulticastBinary(string text) => MulticastBinary(Encoding.UTF8.GetBytes(text));
-    public bool MulticastBinary(ReadOnlySpan<char> text) => MulticastBinary(Encoding.UTF8.GetBytes(text.ToArray()));
-    public bool MulticastBinary(byte[] buffer) => MulticastBinary(buffer.AsSpan());
-    public bool MulticastBinary(byte[] buffer, long offset, long size) => MulticastBinary(buffer.AsSpan((int)offset, (int)size));
+    public bool MulticastBinary(string text)
+    {
+        return MulticastBinary(Encoding.UTF8.GetBytes(text));
+    }
+
+    public bool MulticastBinary(ReadOnlySpan<char> text)
+    {
+        return MulticastBinary(Encoding.UTF8.GetBytes(text.ToArray()));
+    }
+
+    public bool MulticastBinary(byte[] buffer)
+    {
+        return MulticastBinary(buffer.AsSpan());
+    }
+
+    public bool MulticastBinary(byte[] buffer, long offset, long size)
+    {
+        return MulticastBinary(buffer.AsSpan((int)offset, (int)size));
+    }
 
     public bool MulticastBinary(ReadOnlySpan<byte> buffer)
     {
@@ -128,10 +159,25 @@ public class WsServer : HttpServer, IWebSocket
 
     #region WebSocket multicast ping methods
 
-    public bool MulticastPing(string text) => MulticastPing(Encoding.UTF8.GetBytes(text));
-    public bool MulticastPing(ReadOnlySpan<char> text) => MulticastPing(Encoding.UTF8.GetBytes(text.ToArray()));
-    public bool MulticastPing(byte[] buffer) => MulticastPing(buffer.AsSpan());
-    public bool MulticastPing(byte[] buffer, long offset, long size) => MulticastPing(buffer.AsSpan((int)offset, (int)size));
+    public bool MulticastPing(string text)
+    {
+        return MulticastPing(Encoding.UTF8.GetBytes(text));
+    }
+
+    public bool MulticastPing(ReadOnlySpan<char> text)
+    {
+        return MulticastPing(Encoding.UTF8.GetBytes(text.ToArray()));
+    }
+
+    public bool MulticastPing(byte[] buffer)
+    {
+        return MulticastPing(buffer.AsSpan());
+    }
+
+    public bool MulticastPing(byte[] buffer, long offset, long size)
+    {
+        return MulticastPing(buffer.AsSpan((int)offset, (int)size));
+    }
 
     public bool MulticastPing(ReadOnlySpan<byte> buffer)
     {
@@ -143,9 +189,4 @@ public class WsServer : HttpServer, IWebSocket
     }
 
     #endregion
-
-    protected override TcpSession CreateSession()
-    {
-        return new WsSession(this);
-    }
 }

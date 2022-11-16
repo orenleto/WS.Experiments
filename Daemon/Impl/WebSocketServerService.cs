@@ -7,8 +7,8 @@ namespace Daemon.Impl;
 
 public class WebSocketServerService : IHostedService
 {
-    private readonly MyServer _server;
     private readonly ILogger<WebSocketServerService> _logger;
+    private readonly MyServer _server;
 
     public WebSocketServerService(
         IMediator mediator,

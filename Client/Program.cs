@@ -8,9 +8,9 @@ namespace Client;
 
 public class Program
 {
-    private static readonly CancellationTokenSource _cts = new CancellationTokenSource();
-    private static readonly ProxyGenerator _generator = new ProxyGenerator();
-    
+    private static readonly CancellationTokenSource _cts = new();
+    private static readonly ProxyGenerator _generator = new();
+
     public static async Task Main()
     {
         var debugMode = false;
@@ -44,17 +44,14 @@ public class Program
             var fsEvent = await changesReader.ReadAsync(token);
             count++;
             DumpEvent(fsEvent);
-            if (count == 100)
-            {
-                changesReader.Cancel(); // release fileSystemListener on remote machine
-            }
+            if (count == 100) changesReader.Cancel(); // release fileSystemListener on remote machine
         }
-        
+
         static void DumpEvent(FileSystemEvent fileSystemEvent)
         {
         }
     }
-    
+
     public static T Proxy<T>(Configurations.Client client)
     {
         var webSocketTransport = new WebSocketTransport(client.Uri);
@@ -62,5 +59,4 @@ public class Program
         var proxyInterceptor = new ProxyInterceptor<FileSystemEvent>(webSocketTransport, processingHandler);
         return (T)_generator.CreateInterfaceProxyWithoutTarget(typeof(T), proxyInterceptor);
     }
-    
 }

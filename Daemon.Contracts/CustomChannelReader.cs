@@ -16,6 +16,11 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead>, ICancelable wher
         _reader = reader;
     }
 
+    public async Task Cancel()
+    {
+        await _proxy.Cancel();
+    }
+
     public override bool TryRead([MaybeNullWhen(false)] out TRead item)
     {
         return _reader.TryRead(out item);
@@ -24,10 +29,5 @@ public class CustomChannelReader<TRead> : ChannelReader<TRead>, ICancelable wher
     public override ValueTask<bool> WaitToReadAsync(CancellationToken cancellationToken)
     {
         return _reader.WaitToReadAsync(cancellationToken);
-    }
-
-    public async Task Cancel()
-    {
-        await _proxy.Cancel();
     }
 }

@@ -19,7 +19,7 @@ public abstract class SubscribeChanges
         public string Directory { get; }
         public ClientSession ClientSession { get; }
     }
-    
+
     [UsedImplicitly]
     public class Handler : IRequestHandler<Command, Result>
     {
@@ -29,12 +29,12 @@ public abstract class SubscribeChanges
         {
             _subscriptionManager = subscriptionManager;
         }
-    
+
         public Task<Result> Handle(Command command, CancellationToken cancellationToken)
         {
             if (!Directory.Exists(command.Directory))
                 return Task.FromResult(Result.Fail("Directory is not exist"));
-        
+
             _subscriptionManager.Subscribe(command.ClientSession, command.Directory);
             return Task.FromResult(Result.Ok());
         }

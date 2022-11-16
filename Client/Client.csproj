@@ -8,13 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Castle.Core" Version="5.1.0" />
-      <PackageReference Include="Polly" Version="7.2.3" />
-      <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+        <PackageReference Include="Polly" Version="7.2.3"/>
+        <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Daemon.Contracts\Daemon.Contracts.csproj" />
+        <ProjectReference Include="..\Daemon.Contracts\Daemon.Contracts.csproj"/>
     </ItemGroup>
 
 </Project>

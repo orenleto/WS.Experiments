@@ -21,9 +21,9 @@ namespace Daemon.UnitTests;
 
 public class ClientSessionTests
 {
-    private readonly SimpleSession _sut;
     private readonly Mock<IMediator> _mediator;
     private readonly Mock<ISubscriptionManager> _subscriptionManager;
+    private readonly SimpleSession _sut;
 
     public ClientSessionTests()
     {
@@ -39,12 +39,13 @@ public class ClientSessionTests
         _mediator
             .Setup(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok());
-        
+
         _sut.OnWsReceived(rawData, 0, rawData.Length);
-        
+
         Assert.Equal(1, _sut.Payloads.Count);
         Assert.Contains(_sut.Payloads, payload => payload is SuccessPayload);
-        _mediator.Verify(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()), Times.Once);
+        _mediator.Verify(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()),
+            Times.Once);
         _mediator.VerifyNoOtherCalls();
     }
 
@@ -55,12 +56,13 @@ public class ClientSessionTests
         _mediator
             .Setup(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Fail("Fail result"));
-        
+
         _sut.OnWsReceived(rawData, 0, rawData.Length);
-        
+
         Assert.Equal(1, _sut.Payloads.Count);
         Assert.Contains(_sut.Payloads, payload => payload is ErrorPayload);
-        _mediator.Verify(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()), Times.Once);
+        _mediator.Verify(o => o.Send(It.Is<SubscribeChanges.Command>(c => c.Directory == "./SomeDirectory"), It.IsAny<CancellationToken>()),
+            Times.Once);
         _mediator.VerifyNoOtherCalls();
     }
 
@@ -70,7 +72,7 @@ public class ClientSessionTests
         var rawData = JsonSerializer.SerializeToUtf8Bytes(new { Method = "SubscribeChanges-StringInt", Directory = "./SomeDirectory" });
 
         _sut.OnWsReceived(rawData, 0, rawData.Length);
-        
+
         Assert.Equal(1, _sut.Payloads.Count);
         Assert.Contains(_sut.Payloads, payload => payload is ExceptionPayload);
         _mediator.VerifyNoOtherCalls();
@@ -81,7 +83,7 @@ public class ClientSessionTests
     {
         _subscriptionManager.Setup(o => o.UnsubscribeAll(_sut));
         _sut.OnWsDisconnecting();
-        
+
         _subscriptionManager.Verify(o => o.UnsubscribeAll(_sut));
         _subscriptionManager.VerifyNoOtherCalls();
     }
@@ -91,7 +93,7 @@ public class ClientSessionTests
     public void Send_MustSendFileSystemEvent_WhenReceiveFileSystemEventArgs(EventArgs eventArgs, FileSystemEvent expected)
     {
         _sut.Send(eventArgs);
-        
+
         Assert.Equal(1, _sut.Payloads.Count);
         Assert.Contains(_sut.Payloads, payload => payload is FileSystemEvent fse
                                                   && fse.Type == expected.Type
@@ -105,11 +107,11 @@ public class ClientSessionTests
     {
         var emptyEventArgs = EventArgs.Empty;
         _sut.Send(emptyEventArgs);
-        
+
         Assert.Equal(1, _sut.Payloads.Count);
         Assert.Contains(_sut.Payloads, payload => payload is ExceptionPayload);
     }
-    
+
     public class FileSystemEventTestData : IEnumerable<object[]>
     {
         public IEnumerator<object[]> GetEnumerator()
@@ -117,12 +119,15 @@ public class ClientSessionTests
             yield return new object[]
             {
                 new FileSystemEventArgs(WatcherChangeTypes.All, "./some/directory", "text.json"),
-                new FileSystemEvent { ChangeType = WatcherChangeTypes.All, FullPath = "./some/directory/text.json", Name = "text.json"},
+                new FileSystemEvent { ChangeType = WatcherChangeTypes.All, FullPath = "./some/directory/text.json", Name = "text.json" }
             };
             yield return new object[]
             {
                 new RenamedEventArgs(WatcherChangeTypes.Renamed, "./some/directory", "text.json", "old_text.json"),
-                new FileSystemEvent { ChangeType = WatcherChangeTypes.Renamed, FullPath = "./some/directory/text.json", Name = "text.json", OldName = "old_text.json"}
+                new FileSystemEvent
+                {
+                    ChangeType = WatcherChangeTypes.Renamed, FullPath = "./some/directory/text.json", Name = "text.json", OldName = "old_text.json"
+                }
             };
         }
 
@@ -131,12 +136,10 @@ public class ClientSessionTests
             return GetEnumerator();
         }
     }
-    
+
 
     private class SimpleSession : ClientSession
     {
-        public List<Payload> Payloads { get; } = new List<Payload>();
-
         public SimpleSession(WsServer server,
             IMediator mediator,
             ISubscriptionManager subscriptionManager,
@@ -145,12 +148,14 @@ public class ClientSessionTests
         {
         }
 
+        public List<Payload> Payloads { get; } = new();
+
         public override bool SendAsync(ReadOnlySpan<byte> buffer)
         {
             var skip = buffer.Length <= 126 ? 2
                 : buffer.Length <= 65539 ? 4
                 : 10;
-            
+
             Payloads.Add(JsonSerializer.Deserialize<Payload>(buffer.Slice(skip)));
             return true;
         }

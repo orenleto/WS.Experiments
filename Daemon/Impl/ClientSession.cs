@@ -13,16 +13,42 @@ namespace Daemon.Impl;
 
 public class ClientSession : WsSession, IClientSession
 {
-    private readonly WsSession _wsSession;
+    private readonly ILogger<ClientSession> _logger;
     private readonly IMediator _mediator;
     private readonly ISubscriptionManager _subscriptionManager;
-    private readonly ILogger<ClientSession> _logger;
+    private readonly WsSession _wsSession;
 
     public ClientSession(WsServer server, IMediator mediator, ISubscriptionManager subscriptionManager, ILogger<ClientSession> logger) : base(server)
     {
         _mediator = mediator;
         _subscriptionManager = subscriptionManager;
         _logger = logger;
+    }
+
+    public void Send(EventArgs eventArgs)
+    {
+        try
+        {
+            var payload = eventArgs switch
+            {
+                RenamedEventArgs rename => new FileSystemEvent
+                    { ChangeType = rename.ChangeType, FullPath = rename.FullPath, Name = rename.Name, OldName = rename.OldName },
+                FileSystemEventArgs fileEvent => new FileSystemEvent
+                    { ChangeType = fileEvent.ChangeType, FullPath = fileEvent.FullPath, Name = fileEvent.Name, OldName = null },
+                _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
+            };
+            SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Unexpected exception: {ex}", ex);
+            var payload = new ExceptionPayload
+            {
+                Request = null,
+                Message = ex.Message
+            };
+            SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
+        }
     }
 
     public override void OnWsConnected(HttpRequest request)
@@ -58,7 +84,7 @@ public class ClientSession : WsSession, IClientSession
                     var payload = new ErrorPayload
                     {
                         Request = request,
-                        Errors = result.Errors.Select(e => e.Message).ToArray(),
+                        Errors = result.Errors.Select(e => e.Message).ToArray()
                     };
                     SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
                 }
@@ -69,7 +95,7 @@ public class ClientSession : WsSession, IClientSession
                 var payload = new ExceptionPayload
                 {
                     Request = request,
-                    Message = "Unrecognized request: " + Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, (int)offset, (int)size)),
+                    Message = "Unrecognized request: " + Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, (int)offset, (int)size))
                 };
                 SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
             }
@@ -81,31 +107,7 @@ public class ClientSession : WsSession, IClientSession
             var payload = new ExceptionPayload
             {
                 Request = null,
-                Message = ex.Message,
-            };
-            SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
-        }
-    }
-
-    public void Send(EventArgs eventArgs)
-    {
-        try
-        {
-            var payload = eventArgs switch
-            {
-                RenamedEventArgs rename => new FileSystemEvent { ChangeType = rename.ChangeType, FullPath = rename.FullPath, Name = rename.Name, OldName = rename.OldName},
-                FileSystemEventArgs fileEvent => new FileSystemEvent { ChangeType = fileEvent.ChangeType, FullPath = fileEvent.FullPath, Name = fileEvent.Name, OldName = null},
-                _ => throw new ArgumentOutOfRangeException(nameof(eventArgs), "Unexpected type")
-            };
-            SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Unexpected exception: {ex}", ex);
-            var payload = new ExceptionPayload
-            {
-                Request = null,
-                Message = ex.Message,
+                Message = ex.Message
             };
             SendTextAsync(JsonSerializer.SerializeToUtf8Bytes(payload));
         }

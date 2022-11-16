@@ -4,9 +4,9 @@ using System.Web;
 namespace NetCoreServer;
 
 /// <summary>
-/// File cache is used to cache files in memory with optional timeouts.
-/// FileSystemWatcher is used to monitor file system changes in cached
-/// directories.
+///     File cache is used to cache files in memory with optional timeouts.
+///     FileSystemWatcher is used to monitor file system changes in cached
+///     directories.
 /// </summary>
 /// <remarks>Thread-safe.</remarks>
 public class FileCache : IDisposable
@@ -16,17 +16,17 @@ public class FileCache : IDisposable
     #region Cache items access
 
     /// <summary>
-    /// Is the file cache empty?
+    ///     Is the file cache empty?
     /// </summary>
     public bool Empty => _entriesByKey.Count == 0;
 
     /// <summary>
-    /// Get the file cache size
+    ///     Get the file cache size
     /// </summary>
     public int Size => _entriesByKey.Count;
 
     /// <summary>
-    /// Add a new cache value with the given timeout into the file cache
+    ///     Add a new cache value with the given timeout into the file cache
     /// </summary>
     /// <param name="key">Key to add</param>
     /// <param name="value">Value to add</param>
@@ -47,7 +47,7 @@ public class FileCache : IDisposable
     }
 
     /// <summary>
-    /// Try to find the cache value by the given key
+    ///     Try to find the cache value by the given key
     /// </summary>
     /// <param name="key">Key to find</param>
     /// <returns>'true' and cache value if the cache value was found, 'false' if the given key was not found</returns>
@@ -64,7 +64,7 @@ public class FileCache : IDisposable
     }
 
     /// <summary>
-    /// Remove the cache value with the given key from the file cache
+    ///     Remove the cache value with the given key from the file cache
     /// </summary>
     /// <param name="key">Key to remove</param>
     /// <returns>'true' if the cache value was removed, 'false' if the given key was not found</returns>
@@ -81,7 +81,7 @@ public class FileCache : IDisposable
     #region Cache management methods
 
     /// <summary>
-    /// Insert a new cache path with the given timeout into the file cache
+    ///     Insert a new cache path with the given timeout into the file cache
     /// </summary>
     /// <param name="path">Path to insert</param>
     /// <param name="prefix">Cache prefix (default is "/")</param>
@@ -112,7 +112,7 @@ public class FileCache : IDisposable
     }
 
     /// <summary>
-    /// Try to find the cache path
+    ///     Try to find the cache path
     /// </summary>
     /// <param name="path">Path to find</param>
     /// <returns>'true' if the cache path was found, 'false' if the given path was not found</returns>
@@ -126,7 +126,7 @@ public class FileCache : IDisposable
     }
 
     /// <summary>
-    /// Remove the cache path from the file cache
+    ///     Remove the cache path from the file cache
     /// </summary>
     /// <param name="path">Path to remove</param>
     /// <returns>'true' if the cache path was removed, 'false' if the given path was not found</returns>
@@ -136,7 +136,7 @@ public class FileCache : IDisposable
     }
 
     /// <summary>
-    /// Clear the memory cache
+    ///     Clear the memory cache
     /// </summary>
     public void Clear()
     {
@@ -164,11 +164,8 @@ public class FileCache : IDisposable
 
     private class MemCacheEntry
     {
-        private readonly byte[] _value;
         private readonly TimeSpan _timespan;
-
-        public byte[] Value => _value;
-        public TimeSpan Timespan => _timespan;
+        private readonly byte[] _value;
 
         public MemCacheEntry(byte[] value, TimeSpan timespan = new TimeSpan())
         {
@@ -181,13 +178,16 @@ public class FileCache : IDisposable
             _value = Encoding.UTF8.GetBytes(value);
             _timespan = timespan;
         }
+
+        public byte[] Value => _value;
+        public TimeSpan Timespan => _timespan;
     };
 
     private class FileCacheEntry
     {
-        private readonly string _prefix;
-        private readonly string _path;
         private readonly InsertHandler _handler;
+        private readonly string _path;
+        private readonly string _prefix;
         private readonly TimeSpan _timespan;
         private readonly FileSystemWatcher _watcher;
 
@@ -202,6 +202,7 @@ public class FileCache : IDisposable
             // Start the filesystem watcher
             StartWatcher(cache, path, filter);
         }
+
         private void StartWatcher(FileCache cache, string path, string filter)
         {
             FileCacheEntry entry = this;
@@ -231,7 +232,9 @@ public class FileCache : IDisposable
                 if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
                     return true;
             }
-            catch (Exception) {}
+            catch (Exception)
+            {
+            }
 
             return false;
         }
@@ -313,7 +316,10 @@ public class FileCache : IDisposable
 
             return true;
         }
-        catch (Exception) { return false; }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private bool RemoveFileInternal(string path, string key)
@@ -328,7 +334,10 @@ public class FileCache : IDisposable
 
             return Remove(key);
         }
-        catch (Exception) { return false; }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private bool InsertPathInternal(string root, string path, string prefix, TimeSpan timeout, InsertHandler handler)
@@ -358,7 +367,10 @@ public class FileCache : IDisposable
 
             return true;
         }
-        catch (Exception) { return false; }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private bool RemovePathInternal(string path)

@@ -14,8 +14,8 @@ namespace Daemon.UnitTests;
 
 public class WatcherTests
 {
-    const string FileName = "testFile.txt";
-    
+    private const string FileName = "testFile.txt";
+
     [Fact]
     public void CollectionWatcherProcessLoop_MustCallCallback_WhenCreatedNewFile()
     {
@@ -25,17 +25,17 @@ public class WatcherTests
             Directory.CreateDirectory(directory);
         if (File.Exists(filePath))
             File.Delete(filePath);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = new SimpleSubscriber();
 
         var watcher = new Watcher(new FileSystemEventConfiguration(directory), cts.Token, NullLogger<IWatcher>.Instance);
         Assert.Equal(0, watcher.Subscribers);
         Assert.Equal(directory, watcher.Directory);
-        
+
         watcher.AddCallback(subscriber.Send);
         Assert.Equal(1, watcher.Subscribers);
-        
+
         using (var fs = File.CreateText(filePath))
         {
             fs.Write("lorem ipsum dolor sit amet");
@@ -44,11 +44,12 @@ public class WatcherTests
 
         subscriber.ReceivedEvent.Wait(cts.Token);
         cts.Cancel();
-        
+
         Assert.True(subscriber.Events.Count > 0);
-        Assert.Contains(subscriber.Events, args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
+        Assert.Contains(subscriber.Events,
+            args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
     }
-    
+
     [Fact]
     public void CollectionWatcherProcessLoop_MustCallAllCallbacks_WhenMoreThanOneSubscriber()
     {
@@ -58,7 +59,7 @@ public class WatcherTests
             Directory.CreateDirectory(directory);
         if (File.Exists(filePath))
             File.Delete(filePath);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = new SimpleSubscriber();
         var anotherSubscriber = new SimpleSubscriber();
@@ -66,11 +67,11 @@ public class WatcherTests
         var watcher = new Watcher(new FileSystemEventConfiguration(directory), cts.Token, NullLogger<IWatcher>.Instance);
         Assert.Equal(watcher.Subscribers, 0);
         Assert.Equal(watcher.Directory, directory);
-        
+
         watcher.AddCallback(subscriber.Send);
         watcher.AddCallback(anotherSubscriber.Send);
         Assert.Equal(watcher.Subscribers, 2);
-        
+
         using (var fs = File.CreateText(filePath))
         {
             fs.Write("lorem ipsum dolor sit amet");
@@ -80,15 +81,16 @@ public class WatcherTests
         subscriber.ReceivedEvent.Wait(cts.Token);
         anotherSubscriber.ReceivedEvent.Wait(cts.Token);
         cts.Cancel();
-        
-        Assert.True(subscriber.Events.Count > 0);
-        Assert.Contains(subscriber.Events, args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
-        
-        Assert.True(anotherSubscriber.Events.Count > 0);
-        Assert.Contains(anotherSubscriber.Events, args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
 
+        Assert.True(subscriber.Events.Count > 0);
+        Assert.Contains(subscriber.Events,
+            args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
+
+        Assert.True(anotherSubscriber.Events.Count > 0);
+        Assert.Contains(anotherSubscriber.Events,
+            args => args is FileSystemEventArgs { ChangeType: WatcherChangeTypes.Created, Name: FileName, FullPath: filePath });
     }
-    
+
     [Fact]
     public void CollectionWatcherProcessLoop_MustNotListenDirectory_WithoutCallback()
     {
@@ -98,17 +100,17 @@ public class WatcherTests
             Directory.CreateDirectory(directory);
         if (File.Exists(filePath))
             File.Delete(filePath);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = new SimpleSubscriber();
 
         var watcher = new Watcher(new FileSystemEventConfiguration(directory), cts.Token, NullLogger<IWatcher>.Instance);
         Assert.Equal(0, watcher.Subscribers);
         Assert.Equal(directory, watcher.Directory);
-        
+
         watcher.AddCallback(subscriber.Send);
         watcher.RemoveCallback(subscriber.Send);
-        
+
         using (var fs = File.CreateText(filePath))
         {
             fs.Write("lorem ipsum dolor sit amet");
@@ -116,23 +118,23 @@ public class WatcherTests
         }
 
         cts.Cancel();
-        
+
         Assert.Equal(0, watcher.Subscribers);
         Assert.Equal(0, subscriber.Events.Count);
     }
-    
+
     [Fact]
     public void AddCallback_MustThrowInvalidOperationException_WhenWatcherStopped()
     {
         const string directory = $"./{nameof(AddCallback_MustThrowInvalidOperationException_WhenWatcherStopped)}";
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = new SimpleSubscriber();
 
         var watcher = new Watcher(new FileSystemEventConfiguration(directory), cts.Token, NullLogger<IWatcher>.Instance);
-        
+
         watcher.AddCallback(subscriber.Send);
         watcher.RemoveCallback(subscriber.Send);
 
@@ -148,7 +150,7 @@ public class WatcherTests
         const string directory = $"./{nameof(AddCallback_MustCorrectlyCalculateSubscribers_InParallelsCase)}";
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = Enumerable.Range(0, subscriberCount).Select(_ => new SimpleSubscriber()).ToArray();
 
@@ -158,7 +160,7 @@ public class WatcherTests
 
         Parallel.For(0, subscriberCount, i => watcher.AddCallback(subscriber[i].Send));
         cts.Cancel();
-        
+
         Assert.Equal(subscriberCount, watcher.Subscribers);
     }
 
@@ -171,7 +173,7 @@ public class WatcherTests
         const string directory = $"./{nameof(RemoveCallback_MustCorrectlyCalculateSubscribers_InParallelsCase)}";
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = Enumerable.Range(0, subscriberCount).Select(_ => new SimpleSubscriber()).ToArray();
 
@@ -182,7 +184,7 @@ public class WatcherTests
         Parallel.For(0, subscriberCount, i => watcher.AddCallback(subscriber[i].Send));
         Parallel.For(0, unsubscriberCount, i => watcher.RemoveCallback(subscriber[i].Send));
         cts.Cancel();
-        
+
         Assert.Equal(subscriberCount - unsubscriberCount, watcher.Subscribers);
     }
 
@@ -192,11 +194,11 @@ public class WatcherTests
         const int unsubscribedCount = 50;
         const int index = 3;
         const int subscriberCount = unsubscribedCount + index * unsubscribedCount;
-        
+
         const string directory = $"./{nameof(ActionCallback_MustCorrectlyCalculateSubscribers_InParallelsCase)}";
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
-        
+
         var cts = new CancellationTokenSource();
         var subscriber = Enumerable.Range(0, subscriberCount).Select(_ => new SimpleSubscriber()).ToArray();
 
@@ -213,22 +215,22 @@ public class WatcherTests
             watcher.AddCallback(subscriber[i].Send);
         });
         cts.Cancel();
-        
+
         Assert.Equal(subscriberCount - unsubscribedCount, watcher.Subscribers);
     }
 
     private class SimpleSubscriber : IClientSession
     {
-        public Guid Id { get; }
-        public List<EventArgs> Events { get; }
-        public ManualResetEventSlim ReceivedEvent { get; } = new ManualResetEventSlim();
-
         public SimpleSubscriber()
         {
             Id = Guid.NewGuid();
             Events = new List<EventArgs>();
-            
         }
+
+        public List<EventArgs> Events { get; }
+        public ManualResetEventSlim ReceivedEvent { get; } = new();
+        public Guid Id { get; }
+
         public void Send(EventArgs eventArgs)
         {
             Events.Add(eventArgs);

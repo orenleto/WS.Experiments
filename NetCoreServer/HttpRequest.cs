@@ -4,20 +4,43 @@ using System.Text;
 namespace NetCoreServer;
 
 /// <summary>
-/// HTTP request is used to create or process parameters of HTTP protocol request(method, URL, headers, etc).
+///     HTTP request is used to create or process parameters of HTTP protocol request(method, URL, headers, etc).
 /// </summary>
 /// <remarks>Not thread-safe.</remarks>
 public class HttpRequest
 {
+    // HTTP request body
+    private int _bodyIndex;
+    private int _bodyLength;
+    private bool _bodyLengthProvided;
+    private int _bodySize;
+
+    // HTTP request cache
+
+    private int _cacheSize;
+
+    // HTTP request cookies
+    private readonly List<(string, string)> _cookies = new();
+
+    // HTTP request headers
+    private readonly List<(string, string)> _headers = new();
+
+    // HTTP request method
+
+    // HTTP request protocol
+
+    // HTTP request URL
+
     /// <summary>
-    /// Initialize an empty HTTP request
+    ///     Initialize an empty HTTP request
     /// </summary>
     public HttpRequest()
     {
         Clear();
     }
+
     /// <summary>
-    /// Initialize a new HTTP request with a given method, URL and protocol
+    ///     Initialize a new HTTP request with a given method, URL and protocol
     /// </summary>
     /// <param name="method">HTTP method</param>
     /// <param name="url">Requested URL</param>
@@ -28,107 +51,119 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Is the HTTP request empty?
+    ///     Is the HTTP request empty?
     /// </summary>
-    public bool IsEmpty { get { return (_cache.Size == 0); } }
+    public bool IsEmpty => Cache.Size == 0;
+
     /// <summary>
-    /// Is the HTTP request error flag set?
+    ///     Is the HTTP request error flag set?
     /// </summary>
     public bool IsErrorSet { get; private set; }
 
     /// <summary>
-    /// Get the HTTP request method
+    ///     Get the HTTP request method
     /// </summary>
-    public string Method { get { return _method; } }
+    public string Method { get; private set; }
+
     /// <summary>
-    /// Get the HTTP request URL
+    ///     Get the HTTP request URL
     /// </summary>
-    public string Url { get { return _url; } }
+    public string Url { get; private set; }
+
     /// <summary>
-    /// Get the HTTP request protocol version
+    ///     Get the HTTP request protocol version
     /// </summary>
-    public string Protocol { get { return _protocol; } }
+    public string Protocol { get; private set; }
+
     /// <summary>
-    /// Get the HTTP request headers count
+    ///     Get the HTTP request headers count
     /// </summary>
-    public long Headers { get { return _headers.Count; } }
+    public long Headers => _headers.Count;
+
     /// <summary>
-    /// Get the HTTP request header by index
+    ///     Get the HTTP request cookies count
+    /// </summary>
+    public long Cookies => _cookies.Count;
+
+    /// <summary>
+    ///     Get the HTTP request body as string
+    /// </summary>
+    public string Body => Cache.ExtractString(_bodyIndex, _bodySize);
+
+    /// <summary>
+    ///     Get the HTTP request body as byte array
+    /// </summary>
+    public byte[] BodyBytes => Cache.Data[_bodyIndex..(_bodyIndex + _bodySize)];
+
+    /// <summary>
+    ///     Get the HTTP request body as byte span
+    /// </summary>
+    public Span<byte> BodySpan => new(Cache.Data, _bodyIndex, _bodySize);
+
+    /// <summary>
+    ///     Get the HTTP request body length
+    /// </summary>
+    public long BodyLength => _bodyLength;
+
+    /// <summary>
+    ///     Get the HTTP request cache content
+    /// </summary>
+    public Buffer Cache { get; } = new();
+
+    /// <summary>
+    ///     Get the HTTP request header by index
     /// </summary>
     public (string, string) Header(int i)
     {
-        Debug.Assert((i < _headers.Count), "Index out of bounds!");
+        Debug.Assert(i < _headers.Count, "Index out of bounds!");
         if (i >= _headers.Count)
             return ("", "");
 
         return _headers[i];
     }
+
     /// <summary>
-    /// Get the HTTP request cookies count
-    /// </summary>
-    public long Cookies { get { return _cookies.Count; } }
-    /// <summary>
-    /// Get the HTTP request cookie by index
+    ///     Get the HTTP request cookie by index
     /// </summary>
     public (string, string) Cookie(int i)
     {
-        Debug.Assert((i < _cookies.Count), "Index out of bounds!");
+        Debug.Assert(i < _cookies.Count, "Index out of bounds!");
         if (i >= _cookies.Count)
             return ("", "");
 
         return _cookies[i];
     }
-    /// <summary>
-    /// Get the HTTP request body as string
-    /// </summary>
-    public string Body { get { return _cache.ExtractString(_bodyIndex, _bodySize); } }
-    /// <summary>
-    /// Get the HTTP request body as byte array
-    /// </summary>
-    public byte[] BodyBytes { get { return _cache.Data[_bodyIndex..(_bodyIndex + _bodySize)]; } }
-    /// <summary>
-    /// Get the HTTP request body as byte span
-    /// </summary>
-    public Span<byte> BodySpan { get { return new Span<byte>(_cache.Data, _bodyIndex, _bodySize); } }
-    /// <summary>
-    /// Get the HTTP request body length
-    /// </summary>
-    public long BodyLength { get { return _bodyLength; } }
 
     /// <summary>
-    /// Get the HTTP request cache content
-    /// </summary>
-    public Buffer Cache { get { return _cache; } }
-
-    /// <summary>
-    /// Get string from the current HTTP request
+    ///     Get string from the current HTTP request
     /// </summary>
     public override string ToString()
     {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine($"Request method: {Method}");
         sb.AppendLine($"Request URL: {Url}");
         sb.AppendLine($"Request protocol: {Protocol}");
         sb.AppendLine($"Request headers: {Headers}");
-        for (int i = 0; i < Headers; i++)
+        for (var i = 0; i < Headers; i++)
         {
             var header = Header(i);
             sb.AppendLine($"{header.Item1} : {header.Item2}");
         }
+
         sb.AppendLine($"Request body: {BodyLength}");
         sb.AppendLine(Body);
         return sb.ToString();
     }
 
     /// <summary>
-    /// Clear the HTTP request cache
+    ///     Clear the HTTP request cache
     /// </summary>
     public HttpRequest Clear()
     {
         IsErrorSet = false;
-        _method = "";
-        _url = "";
-        _protocol = "";
+        Method = "";
+        Url = "";
+        Protocol = "";
         _headers.Clear();
         _cookies.Clear();
         _bodyIndex = 0;
@@ -136,13 +171,13 @@ public class HttpRequest
         _bodyLength = 0;
         _bodyLengthProvided = false;
 
-        _cache.Clear();
+        Cache.Clear();
         _cacheSize = 0;
         return this;
     }
 
     /// <summary>
-    /// Set the HTTP request begin with a given method, URL and protocol
+    ///     Set the HTTP request begin with a given method, URL and protocol
     /// </summary>
     /// <param name="method">HTTP method</param>
     /// <param name="url">Requested URL</param>
@@ -153,41 +188,41 @@ public class HttpRequest
         Clear();
 
         // Append the HTTP request method
-        _cache.Append(method);
-        _method = method;
+        Cache.Append(method);
+        Method = method;
 
-        _cache.Append(" ");
+        Cache.Append(" ");
 
         // Append the HTTP request URL
-        _cache.Append(url);
-        _url = url;
+        Cache.Append(url);
+        Url = url;
 
-        _cache.Append(" ");
+        Cache.Append(" ");
 
         // Append the HTTP request protocol version
-        _cache.Append(protocol);
-        _protocol = protocol;
+        Cache.Append(protocol);
+        Protocol = protocol;
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
         return this;
     }
 
     /// <summary>
-    /// Set the HTTP request header
+    ///     Set the HTTP request header
     /// </summary>
     /// <param name="key">Header key</param>
     /// <param name="value">Header value</param>
     public HttpRequest SetHeader(string key, string value)
     {
         // Append the HTTP request header's key
-        _cache.Append(key);
+        Cache.Append(key);
 
-        _cache.Append(": ");
+        Cache.Append(": ");
 
         // Append the HTTP request header's value
-        _cache.Append(value);
+        Cache.Append(value);
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
 
         // Add the header to the corresponding collection
         _headers.Add((key, value));
@@ -195,24 +230,24 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Set the HTTP request cookie
+    ///     Set the HTTP request cookie
     /// </summary>
     /// <param name="name">Cookie name</param>
     /// <param name="value">Cookie value</param>
     public HttpRequest SetCookie(string name, string value)
     {
-        string key = "Cookie";
-        string cookie = name + "=" + value;
+        var key = "Cookie";
+        var cookie = name + "=" + value;
 
         // Append the HTTP request header's key
-        _cache.Append(key);
+        Cache.Append(key);
 
-        _cache.Append(": ");
+        Cache.Append(": ");
 
         // Append Cookie
-        _cache.Append(cookie);
+        Cache.Append(cookie);
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
 
         // Add the header to the corresponding collection
         _headers.Add((key, cookie));
@@ -222,17 +257,17 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Add the HTTP request cookie
+    ///     Add the HTTP request cookie
     /// </summary>
     /// <param name="name">Cookie name</param>
     /// <param name="value">Cookie value</param>
     public HttpRequest AddCookie(string name, string value)
     {
         // Append Cookie
-        _cache.Append("; ");
-        _cache.Append(name);
-        _cache.Append("=");
-        _cache.Append(value);
+        Cache.Append("; ");
+        Cache.Append(name);
+        Cache.Append("=");
+        Cache.Append(value);
 
         // Add the cookie to the corresponding collection
         _cookies.Add((name, value));
@@ -240,28 +275,31 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Set the HTTP request body
+    ///     Set the HTTP request body
     /// </summary>
     /// <param name="body">Body string content (default is "")</param>
-    public HttpRequest SetBody(string body = "") => SetBody(body.AsSpan());
+    public HttpRequest SetBody(string body = "")
+    {
+        return SetBody(body.AsSpan());
+    }
 
     /// <summary>
-    /// Set the HTTP request body
+    ///     Set the HTTP request body
     /// </summary>
     /// <param name="body">Body string content as a span of characters</param>
     public HttpRequest SetBody(ReadOnlySpan<char> body)
     {
-        int length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
+        var length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
 
         // Append content length header
         SetHeader("Content-Length", length.ToString());
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
 
-        int index = (int)_cache.Size;
+        var index = (int)Cache.Size;
 
         // Append the HTTP request body
-        _cache.Append(body);
+        Cache.Append(body);
         _bodyIndex = index;
         _bodySize = length;
         _bodyLength = length;
@@ -270,13 +308,16 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Set the HTTP request body
+    ///     Set the HTTP request body
     /// </summary>
     /// <param name="body">Body binary content</param>
-    public HttpRequest SetBody(byte[] body) => SetBody(body.AsSpan());
+    public HttpRequest SetBody(byte[] body)
+    {
+        return SetBody(body.AsSpan());
+    }
 
     /// <summary>
-    /// Set the HTTP request body
+    ///     Set the HTTP request body
     /// </summary>
     /// <param name="body">Body binary content as a span of bytes</param>
     public HttpRequest SetBody(ReadOnlySpan<byte> body)
@@ -284,12 +325,12 @@ public class HttpRequest
         // Append content length header
         SetHeader("Content-Length", body.Length.ToString());
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
 
-        int index = (int)_cache.Size;
+        var index = (int)Cache.Size;
 
         // Append the HTTP request body
-        _cache.Append(body);
+        Cache.Append(body);
         _bodyIndex = index;
         _bodySize = body.Length;
         _bodyLength = body.Length;
@@ -298,7 +339,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Set the HTTP request body length
+    ///     Set the HTTP request body length
     /// </summary>
     /// <param name="length">Body length</param>
     public HttpRequest SetBodyLength(int length)
@@ -306,9 +347,9 @@ public class HttpRequest
         // Append content length header
         SetHeader("Content-Length", length.ToString());
 
-        _cache.Append("\r\n");
+        Cache.Append("\r\n");
 
-        int index = (int)_cache.Size;
+        var index = (int)Cache.Size;
 
         // Clear the HTTP request body
         _bodyIndex = index;
@@ -319,7 +360,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make HEAD request
+    ///     Make HEAD request
     /// </summary>
     /// <param name="url">URL to request</param>
     public HttpRequest MakeHeadRequest(string url)
@@ -331,7 +372,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make GET request
+    ///     Make GET request
     /// </summary>
     /// <param name="url">URL to request</param>
     public HttpRequest MakeGetRequest(string url)
@@ -343,15 +384,18 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make POST request
+    ///     Make POST request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">String content</param>
     /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-    public HttpRequest MakePostRequest(string url, string content, string contentType = "text/plain; charset=UTF-8") => MakePostRequest(url, content.AsSpan(), contentType);
+    public HttpRequest MakePostRequest(string url, string content, string contentType = "text/plain; charset=UTF-8")
+    {
+        return MakePostRequest(url, content.AsSpan(), contentType);
+    }
 
     /// <summary>
-    /// Make POST request
+    ///     Make POST request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">String content as a span of characters</param>
@@ -367,15 +411,18 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make POST request
+    ///     Make POST request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">Binary content</param>
     /// <param name="contentType">Content type (default is "")</param>
-    public HttpRequest MakePostRequest(string url, byte[] content, string contentType = "") => MakePostRequest(url, content.AsSpan(), contentType);
+    public HttpRequest MakePostRequest(string url, byte[] content, string contentType = "")
+    {
+        return MakePostRequest(url, content.AsSpan(), contentType);
+    }
 
     /// <summary>
-    /// Make POST request
+    ///     Make POST request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">Binary content as a span of bytes</param>
@@ -391,15 +438,18 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make PUT request
+    ///     Make PUT request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">String content</param>
     /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-    public HttpRequest MakePutRequest(string url, string content, string contentType = "text/plain; charset=UTF-8") => MakePutRequest(url, content.AsSpan(), contentType);
+    public HttpRequest MakePutRequest(string url, string content, string contentType = "text/plain; charset=UTF-8")
+    {
+        return MakePutRequest(url, content.AsSpan(), contentType);
+    }
 
     /// <summary>
-    /// Make PUT request
+    ///     Make PUT request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">String content as a span of characters</param>
@@ -415,15 +465,18 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make PUT request
+    ///     Make PUT request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">Binary content</param>
     /// <param name="contentType">Content type (default is "")</param>
-    public HttpRequest MakePutRequest(string url, byte[] content, string contentType = "") => MakePutRequest(url, content.AsSpan(), contentType);
+    public HttpRequest MakePutRequest(string url, byte[] content, string contentType = "")
+    {
+        return MakePutRequest(url, content.AsSpan(), contentType);
+    }
 
     /// <summary>
-    /// Make PUT request
+    ///     Make PUT request
     /// </summary>
     /// <param name="url">URL to request</param>
     /// <param name="content">Binary content as a span of bytes</param>
@@ -439,7 +492,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make DELETE request
+    ///     Make DELETE request
     /// </summary>
     /// <param name="url">URL to request</param>
     public HttpRequest MakeDeleteRequest(string url)
@@ -451,7 +504,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make OPTIONS request
+    ///     Make OPTIONS request
     /// </summary>
     /// <param name="url">URL to request</param>
     public HttpRequest MakeOptionsRequest(string url)
@@ -463,7 +516,7 @@ public class HttpRequest
     }
 
     /// <summary>
-    /// Make TRACE request
+    ///     Make TRACE request
     /// </summary>
     /// <param name="url">URL to request</param>
     public HttpRequest MakeTraceRequest(string url)
@@ -474,152 +527,138 @@ public class HttpRequest
         return this;
     }
 
-    // HTTP request method
-    private string _method;
-    // HTTP request URL
-    private string _url;
-    // HTTP request protocol
-    private string _protocol;
-    // HTTP request headers
-    private List<(string, string)> _headers = new List<(string, string)>();
-    // HTTP request cookies
-    private List<(string, string)> _cookies = new List<(string, string)>();
-    // HTTP request body
-    private int _bodyIndex;
-    private int _bodySize;
-    private int _bodyLength;
-    private bool _bodyLengthProvided;
-
-    // HTTP request cache
-    private Buffer _cache = new Buffer();
-    private int _cacheSize;
-
     // Is pending parts of HTTP request
     internal bool IsPendingHeader()
     {
-        return (!IsErrorSet && (_bodyIndex == 0));
+        return !IsErrorSet && _bodyIndex == 0;
     }
+
     internal bool IsPendingBody()
     {
-        return (!IsErrorSet && (_bodyIndex > 0) && (_bodySize > 0));
+        return !IsErrorSet && _bodyIndex > 0 && _bodySize > 0;
     }
 
     internal bool ReceiveHeader(byte[] buffer, int offset, int size)
     {
         // Update the request cache
-        _cache.Append(buffer, offset, size);
+        Cache.Append(buffer, offset, size);
 
         // Try to seek for HTTP header separator
-        for (int i = _cacheSize; i < (int)_cache.Size; i++)
+        for (var i = _cacheSize; i < (int)Cache.Size; i++)
         {
             // Check for the request cache out of bounds
-            if ((i + 3) >= (int)_cache.Size)
+            if (i + 3 >= (int)Cache.Size)
                 break;
 
             // Check for the header separator
-            if ((_cache[i + 0] == '\r') && (_cache[i + 1] == '\n') && (_cache[i + 2] == '\r') && (_cache[i + 3] == '\n'))
+            if (Cache[i + 0] == '\r' && Cache[i + 1] == '\n' && Cache[i + 2] == '\r' && Cache[i + 3] == '\n')
             {
-                int index = 0;
+                var index = 0;
 
                 // Set the error flag for a while...
                 IsErrorSet = true;
 
                 // Parse method
-                int methodIndex = index;
-                int methodSize = 0;
-                while (_cache[index] != ' ')
+                var methodIndex = index;
+                var methodSize = 0;
+                while (Cache[index] != ' ')
                 {
                     methodSize++;
                     index++;
-                    if (index >= (int)_cache.Size)
+                    if (index >= (int)Cache.Size)
                         return false;
                 }
+
                 index++;
-                if (index >= (int)_cache.Size)
+                if (index >= (int)Cache.Size)
                     return false;
-                _method = _cache.ExtractString(methodIndex, methodSize);
+                Method = Cache.ExtractString(methodIndex, methodSize);
 
                 // Parse URL
-                int urlIndex = index;
-                int urlSize = 0;
-                while (_cache[index] != ' ')
+                var urlIndex = index;
+                var urlSize = 0;
+                while (Cache[index] != ' ')
                 {
                     urlSize++;
                     index++;
-                    if (index >= (int)_cache.Size)
+                    if (index >= (int)Cache.Size)
                         return false;
                 }
+
                 index++;
-                if (index >= (int)_cache.Size)
+                if (index >= (int)Cache.Size)
                     return false;
-                _url = _cache.ExtractString(urlIndex, urlSize);
+                Url = Cache.ExtractString(urlIndex, urlSize);
 
                 // Parse protocol version
-                int protocolIndex = index;
-                int protocolSize = 0;
-                while (_cache[index] != '\r')
+                var protocolIndex = index;
+                var protocolSize = 0;
+                while (Cache[index] != '\r')
                 {
                     protocolSize++;
                     index++;
-                    if (index >= (int)_cache.Size)
+                    if (index >= (int)Cache.Size)
                         return false;
                 }
+
                 index++;
-                if ((index >= (int)_cache.Size) || (_cache[index] != '\n'))
+                if (index >= (int)Cache.Size || Cache[index] != '\n')
                     return false;
                 index++;
-                if (index >= (int)_cache.Size)
+                if (index >= (int)Cache.Size)
                     return false;
-                _protocol = _cache.ExtractString(protocolIndex, protocolSize);
+                Protocol = Cache.ExtractString(protocolIndex, protocolSize);
 
                 // Parse headers
-                while ((index < (int)_cache.Size) && (index < i))
+                while (index < (int)Cache.Size && index < i)
                 {
                     // Parse header name
-                    int headerNameIndex = index;
-                    int headerNameSize = 0;
-                    while (_cache[index] != ':')
+                    var headerNameIndex = index;
+                    var headerNameSize = 0;
+                    while (Cache[index] != ':')
                     {
                         headerNameSize++;
                         index++;
                         if (index >= i)
                             break;
-                        if (index >= (int)_cache.Size)
+                        if (index >= (int)Cache.Size)
                             return false;
                     }
+
                     index++;
                     if (index >= i)
                         break;
-                    if (index >= (int)_cache.Size)
+                    if (index >= (int)Cache.Size)
                         return false;
 
                     // Skip all prefix space characters
-                    while (char.IsWhiteSpace((char)_cache[index]))
+                    while (char.IsWhiteSpace((char)Cache[index]))
                     {
                         index++;
                         if (index >= i)
                             break;
-                        if (index >= (int)_cache.Size)
+                        if (index >= (int)Cache.Size)
                             return false;
                     }
 
                     // Parse header value
-                    int headerValueIndex = index;
-                    int headerValueSize = 0;
-                    while (_cache[index] != '\r')
+                    var headerValueIndex = index;
+                    var headerValueSize = 0;
+                    while (Cache[index] != '\r')
                     {
                         headerValueSize++;
                         index++;
                         if (index >= i)
                             break;
-                        if (index >= (int)_cache.Size)
+                        if (index >= (int)Cache.Size)
                             return false;
                     }
+
                     index++;
-                    if ((index >= (int)_cache.Size) || (_cache[index] != '\n'))
+                    if (index >= (int)Cache.Size || Cache[index] != '\n')
                         return false;
                     index++;
-                    if (index >= (int)_cache.Size)
+                    if (index >= (int)Cache.Size)
                         return false;
 
                     // Validate header name and value (sometimes value can be empty)
@@ -627,20 +666,20 @@ public class HttpRequest
                         return false;
 
                     // Add a new header
-                    string headerName = _cache.ExtractString(headerNameIndex, headerNameSize);
-                    string headerValue = _cache.ExtractString(headerValueIndex, headerValueSize);
+                    var headerName = Cache.ExtractString(headerNameIndex, headerNameSize);
+                    var headerValue = Cache.ExtractString(headerValueIndex, headerValueSize);
                     _headers.Add((headerName, headerValue));
 
                     // Try to find the body content length
                     if (string.Compare(headerName, "Content-Length", StringComparison.OrdinalIgnoreCase) == 0)
                     {
                         _bodyLength = 0;
-                        for (int j = headerValueIndex; j < (headerValueIndex + headerValueSize); j++)
+                        for (var j = headerValueIndex; j < headerValueIndex + headerValueSize; j++)
                         {
-                            if ((_cache[j] < '0') || (_cache[j] > '9'))
+                            if (Cache[j] < '0' || Cache[j] > '9')
                                 return false;
                             _bodyLength *= 10;
-                            _bodyLength += _cache[j] - '0';
+                            _bodyLength += Cache[j] - '0';
                             _bodyLengthProvided = true;
                         }
                     }
@@ -648,16 +687,16 @@ public class HttpRequest
                     // Try to find Cookies
                     if (string.Compare(headerName, "Cookie", StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        bool name = true;
-                        bool token = false;
-                        int current = headerValueIndex;
-                        int nameIndex = index;
-                        int nameSize = 0;
-                        int cookieIndex = index;
-                        int cookieSize = 0;
-                        for (int j = headerValueIndex; j < (headerValueIndex + headerValueSize); j++)
+                        var name = true;
+                        var token = false;
+                        var current = headerValueIndex;
+                        var nameIndex = index;
+                        var nameSize = 0;
+                        var cookieIndex = index;
+                        var cookieSize = 0;
+                        for (var j = headerValueIndex; j < headerValueIndex + headerValueSize; j++)
                         {
-                            if (_cache[j] == ' ')
+                            if (Cache[j] == ' ')
                             {
                                 if (token)
                                 {
@@ -672,10 +711,12 @@ public class HttpRequest
                                         cookieSize = j - current;
                                     }
                                 }
+
                                 token = false;
                                 continue;
                             }
-                            if (_cache[j] == '=')
+
+                            if (Cache[j] == '=')
                             {
                                 if (token)
                                 {
@@ -690,11 +731,13 @@ public class HttpRequest
                                         cookieSize = j - current;
                                     }
                                 }
+
                                 token = false;
                                 name = false;
                                 continue;
                             }
-                            if (_cache[j] == ';')
+
+                            if (Cache[j] == ';')
                             {
                                 if (token)
                                 {
@@ -710,10 +753,10 @@ public class HttpRequest
                                     }
 
                                     // Validate the cookie
-                                    if ((nameSize > 0) && (cookieSize > 0))
+                                    if (nameSize > 0 && cookieSize > 0)
                                     {
                                         // Add the cookie to the corresponding collection
-                                        _cookies.Add((_cache.ExtractString(nameIndex, nameSize), _cache.ExtractString(cookieIndex, cookieSize)));
+                                        _cookies.Add((Cache.ExtractString(nameIndex, nameSize), Cache.ExtractString(cookieIndex, cookieSize)));
 
                                         // Resset the current cookie values
                                         nameIndex = j;
@@ -722,10 +765,12 @@ public class HttpRequest
                                         cookieSize = 0;
                                     }
                                 }
+
                                 token = false;
                                 name = true;
                                 continue;
                             }
+
                             if (!token)
                             {
                                 current = j;
@@ -748,11 +793,9 @@ public class HttpRequest
                             }
 
                             // Validate the cookie
-                            if ((nameSize > 0) && (cookieSize > 0))
-                            {
+                            if (nameSize > 0 && cookieSize > 0)
                                 // Add the cookie to the corresponding collection
-                                _cookies.Add((_cache.ExtractString(nameIndex, nameSize), _cache.ExtractString(cookieIndex, cookieSize)));
-                            }
+                                _cookies.Add((Cache.ExtractString(nameIndex, nameSize), Cache.ExtractString(cookieIndex, cookieSize)));
                         }
                     }
                 }
@@ -762,17 +805,17 @@ public class HttpRequest
 
                 // Update the body index and size
                 _bodyIndex = i + 4;
-                _bodySize = (int)_cache.Size - i - 4;
+                _bodySize = (int)Cache.Size - i - 4;
 
                 // Update the parsed cache size
-                _cacheSize = (int)_cache.Size;
+                _cacheSize = (int)Cache.Size;
 
                 return true;
             }
         }
 
         // Update the parsed cache size
-        _cacheSize = ((int)_cache.Size >= 3) ? ((int)_cache.Size - 3) : 0;
+        _cacheSize = (int)Cache.Size >= 3 ? (int)Cache.Size - 3 : 0;
 
         return false;
     }
@@ -780,10 +823,10 @@ public class HttpRequest
     internal bool ReceiveBody(byte[] buffer, int offset, int size)
     {
         // Update the request cache
-        _cache.Append(buffer, offset, size);
+        Cache.Append(buffer, offset, size);
 
         // Update the parsed cache size
-        _cacheSize = (int)_cache.Size;
+        _cacheSize = (int)Cache.Size;
 
         // Update body size
         _bodySize += size;
@@ -801,7 +844,7 @@ public class HttpRequest
         else
         {
             // HEAD/GET/DELETE/OPTIONS/TRACE request might have no body
-            if ((Method == "HEAD") || (Method == "GET") || (Method == "DELETE") || (Method == "OPTIONS") || (Method == "TRACE"))
+            if (Method == "HEAD" || Method == "GET" || Method == "DELETE" || Method == "OPTIONS" || Method == "TRACE")
             {
                 _bodyLength = 0;
                 _bodySize = 0;
@@ -811,10 +854,10 @@ public class HttpRequest
             // Check the body content to find the request body end
             if (_bodySize >= 4)
             {
-                int index = _bodyIndex + _bodySize - 4;
+                var index = _bodyIndex + _bodySize - 4;
 
                 // Was the body fully received?
-                if ((_cache[index + 0] == '\r') && (_cache[index + 1] == '\n') && (_cache[index + 2] == '\r') && (_cache[index + 3] == '\n'))
+                if (Cache[index + 0] == '\r' && Cache[index + 1] == '\n' && Cache[index + 2] == '\r' && Cache[index + 3] == '\n')
                 {
                     _bodyLength = _bodySize;
                     return true;

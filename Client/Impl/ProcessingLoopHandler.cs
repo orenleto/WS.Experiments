@@ -22,22 +22,26 @@ public class ProcessingLoopHandler : IProcessingHandler<FileSystemEvent>
                 FullPath = request.Directory
             };
         }
-        else if (message is ErrorPayload error)
+
+        if (message is ErrorPayload error)
         {
             var errorMessage = string.Join(", ", error.Errors);
             Console.WriteLine("Ошибка при выполнении запроса {0}: {1}", error.Request, errorMessage);
             throw new InvalidOperationException(errorMessage);
         }
-        else if (message is ExceptionPayload serverException)
+
+        if (message is ExceptionPayload serverException)
         {
             Console.WriteLine("Исключение при выполнении запроса {0}: {1}", serverException.Request, serverException.Message);
             throw new Exception(serverException.Message);
         }
-        else if (message is FileSystemEvent fileSystemEvent)
+
+        if (message is FileSystemEvent fileSystemEvent)
         {
             Console.WriteLine("Получили cообщение {0}", Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(message)));
             return fileSystemEvent;
         }
+
         return null;
     }
 }

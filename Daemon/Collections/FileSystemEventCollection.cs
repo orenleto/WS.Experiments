@@ -5,25 +5,26 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Daemon.Collections;
 
-/// <inheritdoc/>
+/// <inheritdoc />
 /// <summary>
-/// Collection of any file system events currently happening in a given directory, Should be used
-/// on a background task as this will block while waiting for change events
+///     Collection of any file system events currently happening in a given directory, Should be used
+///     on a background task as this will block while waiting for change events
 /// </summary>
 public sealed class FileSystemEventCollection : IEnumerable<FileSystemEventArgs>, IDisposable
 {
-    internal readonly ManualResetEventSlim IsInitializedEvent = new();
     private readonly CancellationToken _cancellationToken;
     private readonly FileSystemEventConfiguration _configuration;
     private readonly ILogger<FileSystemEventCollection> _logger;
+    internal readonly ManualResetEventSlim IsInitializedEvent = new();
 
     /// <summary>
-    /// Initializes a new instance of <see cref="FileSystemEventCollection"/>
+    ///     Initializes a new instance of <see cref="FileSystemEventCollection" />
     /// </summary>
     /// <param name="configuration">        Configuration to use </param>
     /// <param name="cancellationToken">    Cancellation token to signal to watcher to stop </param>
     /// <param name="logger">               Logger to use </param>
-    public FileSystemEventCollection(FileSystemEventConfiguration configuration, CancellationToken cancellationToken, ILogger<FileSystemEventCollection>? logger = null)
+    public FileSystemEventCollection(FileSystemEventConfiguration configuration, CancellationToken cancellationToken,
+        ILogger<FileSystemEventCollection>? logger = null)
     {
         if (cancellationToken == default)
             throw new ArgumentNullException(nameof(cancellationToken));
@@ -34,26 +35,33 @@ public sealed class FileSystemEventCollection : IEnumerable<FileSystemEventArgs>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FileSystemEventCollection"/>
+    ///     Initializes a new instance of the <see cref="FileSystemEventCollection" />
     /// </summary>
     /// <param name="cancellationToken"> Cancellation token to signal to watcher to stop </param>
     /// <param name="directory">         Directory to monitor for events </param>
     /// <param name="filePattern">       File pattern to monitor within directory </param>
     /// <param name="logger">            Logger to use </param>
-    public FileSystemEventCollection(CancellationToken cancellationToken, string directory, string? filePattern = null, ILogger<FileSystemEventCollection>? logger = null)
+    public FileSystemEventCollection(CancellationToken cancellationToken, string directory, string? filePattern = null,
+        ILogger<FileSystemEventCollection>? logger = null)
         : this(new FileSystemEventConfiguration(directory, filePattern), cancellationToken, logger)
     {
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        IsInitializedEvent.Dispose();
+    }
+
+    /// <inheritdoc />
     /// <summary>
-    /// Iterates over the collection of <see cref="FileSystemEventArgs"/> awaiting any new ones.
-    /// This is long running and will block while waiting for the next file system event
+    ///     Iterates over the collection of <see cref="FileSystemEventArgs" /> awaiting any new ones.
+    ///     This is long running and will block while waiting for the next file system event
     /// </summary>
     /// <remarks>
-    /// On initial creation of collection will create an event for all files currently in monitored directory.
+    ///     On initial creation of collection will create an event for all files currently in monitored directory.
     /// </remarks>
-    /// <returns> Non duplicate <see cref="FileSystemEventArgs"/> </returns>
+    /// <returns> Non duplicate <see cref="FileSystemEventArgs" /> </returns>
     public IEnumerator<FileSystemEventArgs> GetEnumerator()
     {
         if (_cancellationToken.IsCancellationRequested)
@@ -77,19 +85,16 @@ public sealed class FileSystemEventCollection : IEnumerable<FileSystemEventArgs>
             yield return fileSystemEventArgs!;
     }
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    /// <inheritdoc/>
-    public void Dispose()
+    IEnumerator IEnumerable.GetEnumerator()
     {
-        IsInitializedEvent.Dispose();
+        return GetEnumerator();
     }
 
     private void Initialize(FileSystemEventQueue queue, FileSystemWatcher watcher)
     {
         var tasks = new[]
         {
-            Task.Run(() => InitializeWatcher(queue, watcher), _cancellationToken),
+            Task.Run(() => InitializeWatcher(queue, watcher), _cancellationToken)
             // Task.Run(() => QueueInitialFiles(queue), _cancellationToken)
         };
         Task.WaitAll(tasks, _cancellationToken);
@@ -121,8 +126,6 @@ public sealed class FileSystemEventCollection : IEnumerable<FileSystemEventArgs>
     {
         _logger.QueuingInitialFiles();
         foreach (var file in Directory.GetFiles(_configuration.DirectoryToMonitor, _configuration.DirectoryFileFilter, SearchOption.TopDirectoryOnly))
-        {
             queue.Enqueue(new FileSystemEventArgs(WatcherChangeTypes.All, _configuration.DirectoryToMonitor, Path.GetFileName(file)));
-        }
     }
 }

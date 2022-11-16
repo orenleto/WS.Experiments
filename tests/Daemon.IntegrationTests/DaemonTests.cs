@@ -20,16 +20,16 @@ namespace Daemon.IntegrationTests;
 
 public class DaemonTests : IDisposable
 {
-    private const string txtFileName = "test_file.txt";
-    private const string jsonFileName = "test_file.json";
-    private const string binFileName = "test_file.bin";
-    
+    private const string TxtFileName = "test_file.txt";
+    private const string JsonFileName = "test_file.json";
+    private const string BinFileName = "test_file.bin";
+    private const int Port = 28933;
+
     private static readonly IPAddress _ipAddress = IPAddress.Loopback;
-    private static readonly int _port = 28933;
     private static readonly ArraySegment<byte> _randomBytes;
-    
-    private readonly ServiceProvider _serviceProvider;
     private readonly IHostedService _service;
+
+    private readonly ServiceProvider _serviceProvider;
 
     static DaemonTests()
     {
@@ -50,26 +50,32 @@ public class DaemonTests : IDisposable
         services.Configure<ServerConfiguration>(c =>
         {
             c.IpAddress = _ipAddress.ToString();
-            c.Port = _port;
+            c.Port = Port;
         });
         _serviceProvider = services.BuildServiceProvider();
         _service = _serviceProvider.GetService<IHostedService>();
         _service.StartAsync(CancellationToken.None);
     }
-    
+
+    public async void Dispose()
+    {
+        await _service.StopAsync(CancellationToken.None);
+        await _serviceProvider.DisposeAsync();
+    }
+
     [Fact]
     public async Task SubscribeChanges_MustReceiveAllDirectoryChanges()
     {
         var testDirectory = $"./IntegrationTest/{nameof(SubscribeChanges_MustReceiveAllDirectoryChanges)}";
         PrepareDirectory(testDirectory);
-        
+
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         var events = new List<FileSystemEvent>();
-        
-        var daemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{_port}/"));
+
+        var daemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{Port}/"));
         var changesReader = await daemon.SubscribeChanges(testDirectory);
-        
+
         await changesReader.WaitToReadAsync(token); // Receive subscribing accept
 
         await CreateTxtFile(testDirectory);
@@ -85,24 +91,24 @@ public class DaemonTests : IDisposable
         }
 
         Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.All && @event.FullPath == testDirectory);
-        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == txtFileName);
-        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == jsonFileName);
-        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == binFileName);
+        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == TxtFileName);
+        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == JsonFileName);
+        Assert.Contains(events, @event => @event.ChangeType == WatcherChangeTypes.Created && @event.Name == BinFileName);
     }
-    
-    
+
+
     [Fact]
     public async Task SubscribeChanges_MustDeliverEventToEverySubscriber()
     {
         var testDirectory = $"./IntegrationTest/{nameof(SubscribeChanges_MustDeliverEventToEverySubscriber)}";
         PrepareDirectory(testDirectory);
-        
+
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         var firstListenerEvents = new List<FileSystemEvent>();
         var secondListenerEvents = new List<FileSystemEvent>();
 
-        var firstDaemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{_port}/"));
+        var firstDaemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{Port}/"));
         var firstChangesReader = await firstDaemon.SubscribeChanges(testDirectory);
 
         var firstSubscribed = await firstChangesReader.WaitToReadAsync(token);
@@ -113,8 +119,8 @@ public class DaemonTests : IDisposable
 
         await CreateTxtFile(testDirectory);
         await firstChangesReader.WaitToReadAsync(token);
-        
-        var secondDaemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{_port}/"));
+
+        var secondDaemon = Client.Program.Proxy<IFileSystemDaemon>(new Client.Configurations.Client($"ws://{_ipAddress.ToString()}:{Port}/"));
         var secondChangesReader = await secondDaemon.SubscribeChanges(testDirectory);
         var secondSubscribed = await secondChangesReader.WaitToReadAsync(token);
         Assert.True(secondSubscribed);
@@ -124,14 +130,15 @@ public class DaemonTests : IDisposable
 
         await CreateJsonFile(testDirectory);
         await secondChangesReader.WaitToReadAsync(token);
-        
+
         while (firstListenerEvents.Count < 4 && await firstChangesReader.WaitToReadAsync(token))
         {
             var fsEvent = await firstChangesReader.ReadAsync(token);
             firstListenerEvents.Add(fsEvent);
         }
+
         await firstChangesReader.Cancel();
-        
+
         await CreateBinFile(testDirectory);
         while (secondListenerEvents.Count < 4 && await secondChangesReader.WaitToReadAsync(token))
         {
@@ -145,34 +152,37 @@ public class DaemonTests : IDisposable
             var fsEvent = await firstChangesReader.ReadAsync(token);
             firstListenerEvents.Add(fsEvent);
         }
+
         while (await secondChangesReader.WaitToReadAsync(token))
         {
             var fsEvent = await secondChangesReader.ReadAsync(token);
             secondListenerEvents.Add(fsEvent);
         }
-        
+
         Assert.NotEmpty(firstListenerEvents);
-        Assert.Equal(new[] {txtFileName, jsonFileName}, firstListenerEvents.Select(e => e.Name).Distinct());
-        
+        Assert.Equal(new[] { TxtFileName, JsonFileName }, firstListenerEvents.Select(e => e.Name).Distinct());
+
         Assert.NotEmpty(secondListenerEvents);
-        Assert.Equal(new[] {jsonFileName, binFileName}, secondListenerEvents.Select(e => e.Name).Distinct());
+        Assert.Equal(new[] { JsonFileName, BinFileName }, secondListenerEvents.Select(e => e.Name).Distinct());
     }
 
     private static async Task CreateTxtFile(string path)
     {
-        await using var fs = File.CreateText($"{path}/{txtFileName}");
+        await using var fs = File.CreateText($"{path}/{TxtFileName}");
         await fs.WriteAsync("lorem ipsum dolor sit amet");
         await fs.FlushAsync();
     }
+
     private static async Task CreateJsonFile(string path)
     {
-        await using var fs = File.CreateText($"{path}/{jsonFileName}");
+        await using var fs = File.CreateText($"{path}/{JsonFileName}");
         await fs.WriteAsync("{\"message\": \"lorem ipsum dolor sit amet\"}");
         await fs.FlushAsync();
     }
+
     private static async Task CreateBinFile(string path)
-    { 
-        await using var fs = File.Create($"{path}/{binFileName}");
+    {
+        await using var fs = File.Create($"{path}/{BinFileName}");
         await fs.WriteAsync(_randomBytes);
         await fs.FlushAsync();
     }
@@ -183,11 +193,5 @@ public class DaemonTests : IDisposable
             Directory.CreateDirectory(path);
         foreach (var file in Directory.EnumerateFiles(path))
             File.Delete(file);
-    }
-    
-    public async void Dispose()
-    {
-        await _service.StopAsync(CancellationToken.None);
-        await _serviceProvider.DisposeAsync();
     }
 }

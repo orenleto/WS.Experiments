@@ -10,14 +10,14 @@ namespace Daemon.Contracts;
 
 public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where T : Payload
 {
-    private static readonly ConcurrentDictionary<MethodInfo, Type> _dataTransferTypes = new ConcurrentDictionary<MethodInfo, Type>();
-
-    private readonly CancellationTokenSource _proxyTokenSource = new CancellationTokenSource();
-    private readonly ITransport _transport;
-    private readonly IProcessingHandler<T> _processingHandler;
+    private static readonly ConcurrentDictionary<MethodInfo, Type> _dataTransferTypes = new();
     private readonly Channel<T> _channel;
-    private readonly ManualResetEventSlim _initialized = new ManualResetEventSlim();
-    
+    private readonly ManualResetEventSlim _initialized = new();
+    private readonly IProcessingHandler<T> _processingHandler;
+
+    private readonly CancellationTokenSource _proxyTokenSource = new();
+    private readonly ITransport _transport;
+
     public ProxyInterceptor(
         ITransport transport,
         IProcessingHandler<T> processingHandler
@@ -40,7 +40,20 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
             }
         });
     }
-    
+
+    public Task Cancel()
+    {
+        _proxyTokenSource.Cancel();
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _initialized.Dispose();
+        _proxyTokenSource.Dispose();
+        _transport.Dispose();
+    }
+
     public void Intercept(IInvocation invocation)
     {
         _initialized.Wait(_proxyTokenSource.Token);
@@ -66,7 +79,7 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
                 var body = await _transport.ReceiveAsync(cancellationToken);
                 if (body == ArraySegment<byte>.Empty)
                     break;
-                
+
                 var @event = await _processingHandler.Handle(body, cancellationToken);
                 if (@event is not null)
                     await _channel.Writer.WriteAsync(@event, cancellationToken);
@@ -80,18 +93,5 @@ public class ProxyInterceptor<T> : IInterceptor, ICancelable, IDisposable where 
         {
             _channel.Writer.Complete();
         }
-    }
-
-    public Task Cancel()
-    {
-        _proxyTokenSource.Cancel();
-        return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        _initialized.Dispose();
-        _proxyTokenSource.Dispose();
-        _transport.Dispose();
     }
 }

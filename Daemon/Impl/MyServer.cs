@@ -8,10 +8,10 @@ namespace Daemon.Impl;
 
 public class MyServer : WsServer
 {
+    private readonly ILogger<MyServer> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly IMediator _mediator;
     private readonly ISubscriptionManager _subscriptionManager;
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<MyServer> _logger;
 
     public MyServer(
         ServerConfiguration configuration,
@@ -25,8 +25,11 @@ public class MyServer : WsServer
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<MyServer>();
     }
-    
-    protected override TcpSession CreateSession() => new ClientSession(this, _mediator, _subscriptionManager, _loggerFactory.CreateLogger<ClientSession>());
+
+    protected override TcpSession CreateSession()
+    {
+        return new ClientSession(this, _mediator, _subscriptionManager, _loggerFactory.CreateLogger<ClientSession>());
+    }
 
     protected override void OnStarted()
     {

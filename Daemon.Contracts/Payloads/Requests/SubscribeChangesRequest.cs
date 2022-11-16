@@ -4,9 +4,6 @@ namespace Daemon.Contracts.Payloads.Requests;
 
 public class SubscribeChangesRequest : Request
 {
-    [TypeIndicator] public override string Method => "SubscribeChanges-String";
-    public string Directory { get; set; }
-
     public SubscribeChangesRequest(string directory)
     {
         Directory = directory;
@@ -16,4 +13,7 @@ public class SubscribeChangesRequest : Request
     {
         Directory = string.Empty;
     }
+
+    [TypeIndicator] public override string Method => "SubscribeChanges-String";
+    public string Directory { get; set; }
 }

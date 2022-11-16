@@ -8,10 +8,10 @@ namespace Daemon.Collections;
 internal sealed class FileSystemEventQueue : IDisposable
 {
     private readonly ConcurrentDictionary<FileSystemEventArgs, Timer> _deduplicateQueue;
-    private readonly ConcurrentQueue<FileSystemEventArgs?> _queue;
-    private readonly SemaphoreSlim _enqueueSemaphore;
     private readonly double _duplicateDelayWindow;
+    private readonly SemaphoreSlim _enqueueSemaphore;
     private readonly ILogger _logger;
+    private readonly ConcurrentQueue<FileSystemEventArgs?> _queue;
 
     internal FileSystemEventQueue(double duplicateDelayWindow, ILogger logger)
     {
@@ -26,12 +26,8 @@ internal sealed class FileSystemEventQueue : IDisposable
     {
         _enqueueSemaphore.Dispose();
         if (!_deduplicateQueue.IsEmpty)
-        {
             foreach (var info in _deduplicateQueue)
-            {
                 info.Value.Dispose();
-            }
-        }
     }
 
     public void Enqueue(FileSystemEventArgs fileSystemEventArgs)
@@ -77,12 +73,8 @@ internal sealed class FileSystemEventQueue : IDisposable
     private FileSystemEventArgs GetOriginatingKey(FileSystemEventArgs fileSystemEventArgs)
     {
         foreach (var @event in _deduplicateQueue)
-        {
             if (@event.Key.IsDuplicate(fileSystemEventArgs))
-            {
                 return @event.Key;
-            }
-        }
 
         return fileSystemEventArgs;
     }

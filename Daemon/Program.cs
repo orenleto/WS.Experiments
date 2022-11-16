@@ -8,7 +8,7 @@ namespace Daemon;
 
 public class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         await Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((_, config) =>

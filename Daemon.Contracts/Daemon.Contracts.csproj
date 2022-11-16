@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.1.0" />
-        <PackageReference Include="TypeIndicatorConverter.TextJson" Version="1.0.0" />
+        <PackageReference Include="Castle.Core" Version="5.1.0"/>
+        <PackageReference Include="TypeIndicatorConverter.TextJson" Version="1.0.0"/>
     </ItemGroup>
-    
+
 </Project>

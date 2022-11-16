@@ -5,19 +5,25 @@ namespace Daemon.Impl;
 
 public class SubscriptionManager : IDisposable, ISubscriptionManager
 {
-    private readonly IWatcherFactory _watcherFactory;
     private readonly ILogger<SubscriptionManager> _logger;
-    private readonly object _syncRoot = new object();
+    private readonly ConcurrentDictionary<Guid, LinkedList<IWatcher>> _subscriptions = new();
+    private readonly object _syncRoot = new();
+    private readonly IWatcherFactory _watcherFactory;
 
-    private readonly CancellationTokenSource _watcherTokenSource = new CancellationTokenSource();
+    private readonly ConcurrentDictionary<string, IWatcher> _watchers = new();
 
-    private readonly ConcurrentDictionary<string, IWatcher> _watchers = new ConcurrentDictionary<string, IWatcher>();
-    private readonly ConcurrentDictionary<Guid, LinkedList<IWatcher>> _subscriptions = new ConcurrentDictionary<Guid, LinkedList<IWatcher>>();
+    private readonly CancellationTokenSource _watcherTokenSource = new();
 
     public SubscriptionManager(IWatcherFactory watcherFactory, ILogger<SubscriptionManager> logger)
     {
         _logger = logger;
         _watcherFactory = watcherFactory;
+    }
+
+    public void Dispose()
+    {
+        _watcherTokenSource.Cancel();
+        foreach (var watcher in _watchers.Values) watcher.Dispose();
     }
 
     public void Subscribe(IClientSession clientSession, string directory)
@@ -54,20 +60,8 @@ public class SubscriptionManager : IDisposable, ISubscriptionManager
             {
                 _logger.LogInformation("Client {id} unsubscribed from {directory}", clientSession.Id, watcher.Directory);
                 watcher.RemoveCallback(clientSession.Send);
-                if (watcher.Subscribers == 0 && _watchers.TryRemove(watcher.Directory, out _))
-                {
-                    watcher.Dispose();
-                }
+                if (watcher.Subscribers == 0 && _watchers.TryRemove(watcher.Directory, out _)) watcher.Dispose();
             }
-        }
-    }
-
-    public void Dispose()
-    {
-        _watcherTokenSource.Cancel();
-        foreach (var watcher in _watchers.Values)
-        {
-            watcher.Dispose();
         }
     }
 }
